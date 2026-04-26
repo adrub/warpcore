@@ -8,37 +8,33 @@ class SimpleAI(Driver):
         rpm = sensors.get("rpm", 0)
         gear = int(sensors.get("gear", 1))
 
-        # angle = which way car is pointing relative to track (0 = straight ahead)
-        # trackPos = where car is on track (-1 left edge, 0 center, +1 right edge)
-        # angle aligns the nose, trackPos corrects position — both needed to avoid oscillation
         angle = sensors.get("angle", 0)
-        steer = max(-1.0, min(1.0, angle * 0.5 - track_pos * 0.3))
+        track = sensors.get("track", [100] * 19)
+        forward_range = track[9]
 
+        # Tighter corner (small forward_range) = boost steering gains
+        corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
+        steer = max(-1.0, min(1.0, angle * 0.5 * corner_factor - track_pos * 0.3 * corner_factor))
+
+        # Gear shifting
         if rpm > 8000 and gear < 6:
             gear += 1
         elif rpm < 2500 and gear > 1:
             gear -= 1
 
-        track = sensors.get("track", [100] * 19)
-        forward_range = min(track[7:12])
-
-        if forward_range > 150:
-            target = 200
-        elif forward_range > 80:
-            target = 140
-        elif forward_range > 40:
-            target = 90
-        else:
-            target = 60
-
-        if speed > target + 5:
-            accel = 0
-            brake = min(1.0, (speed - target) / 20)
-        elif speed < target - 10:
+        if forward_range > 100:
             accel = 1.0
-            brake = 0
+        elif forward_range > 50:
+            accel = 0.5
         else:
-            accel = 0.3
+            accel = 0.0
+
+        # Graduated braking: start earlier and brake harder as corner tightens
+        if speed > 80 and forward_range < 80:
+            brake = 0.8
+        elif speed > 50 and forward_range < 50:
+            brake = 0.6
+        else:
             brake = 0
 
         return accel, brake, steer, gear

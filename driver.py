@@ -47,8 +47,6 @@ class Driver:
                 sensors = parse_sensors(data.decode())
                 accel, brake, steer, self.gear = self.decide(sensors)
                 cmd = build_command(accel, brake, steer, self.gear)
-                if sensors.get("distRaced", 0) % 50 < 2:
-                    print(f"gear={int(sensors.get('gear',0))} rpm={sensors.get('rpm',0):.0f} speed={sensors.get('speedX',0):.1f}")
                 self.sock.sendto(cmd.encode(), (self.host, self.port))
         except KeyboardInterrupt:
             print("Stopped.")
