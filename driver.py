@@ -1,5 +1,4 @@
 import socket
-import re
 
 HOST = "localhost"
 PORT = 3001
@@ -7,12 +6,33 @@ PORT = 3001
 INIT_MSG = "SCR(init -90 -75 -60 -45 -30 -20 -15 -10 -5 0 5 10 15 20 30 45 60 75 90)"
 
 
+def _extract(raw, key):
+    idx = raw.find(f"({key} ")
+    if idx == -1:
+        return None
+    start = idx + len(key) + 2
+    end = raw.find(")", start)
+    return raw[start:end].strip()
+
+
 def parse_sensors(raw):
+    single_keys = [
+        "angle", "curLapTime", "damage", "distFromStart", "distRaced",
+        "fuel", "gear", "lastLapTime", "pitch", "racePos", "roll", "rpm",
+        "speedGlobalX", "speedGlobalY", "speedX", "speedY", "speedZ",
+        "trackPos", "x", "y", "yaw", "z"
+    ]
+    multi_keys = ["focus", "opponents", "track", "wheelSpinVel"]
+
     sensors = {}
-    for match in re.finditer(r"\((\S+)\s+([^)]+)\)", raw):
-        key = match.group(1)
-        values = match.group(2).split()
-        sensors[key] = float(values[0]) if len(values) == 1 else [float(v) for v in values]
+    for key in single_keys:
+        val = _extract(raw, key)
+        if val is not None:
+            sensors[key] = float(val)
+    for key in multi_keys:
+        val = _extract(raw, key)
+        if val is not None:
+            sensors[key] = [float(v) for v in val.split()]
     return sensors
 
 
