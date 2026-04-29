@@ -60,8 +60,14 @@ sudo make datainstall
 ls /usr/local/lib/torcs/drivers/ | grep scr
 ```
  
-If it prints `scr_server`, you're good.
+If it prints `scr_server`, it has installed properly.
  
+ Change the car models to the F1 car as follows:
+ 
+ ```bash
+ sudo sed -i 's/car1-trb1/car1-ow1/g' /usr/local/share/games/torcs/drivers/scr_server/scr_server.xml
+ ```
+
 ---
 
 ## 5. Running TORCS
@@ -120,3 +126,24 @@ The car should start moving in TORCS and you'll see debug output in the VS Code 
 **Don't run TORCS from the VS Code terminal** — it needs its own terminal window for the graphical display.
  
 ---
+
+## 7. Other
+
+**`make` fails with "cannot find -lSOMETHING"**
+
+You're missing a library. Run `sudo apt-get install -y libSOMETHING-dev` replacing SOMETHING with whatever it says is missing, then run `make` again.
+
+**`scr_server` not in TORCS driver list**
+
+The compile didn't fully work. Go back to the torcs folder and re-run:
+
+```bash
+cd ~/torcs-1.3.7
+export TORCS_BASE=$(pwd)
+export MAKE_DEFAULT=$TORCS_BASE/Make-default.mk
+make
+sudo make install
+sudo make datainstall
+```
+
+Also make sure GitHub CLI is installed in Ubuntu to push changes.
