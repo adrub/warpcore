@@ -1,5 +1,27 @@
 from driver import Driver
 
+GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]  
+REDLINE = 18700
+SHIFT = 0.65
+
+def gearbox(rpm, gear):
+    if gear <= 0:
+        return 1
+
+    # TAKE CURRENT SPEED AND CHECK RPM IN NEXT GEAR
+    if gear < len(GEAR_RATIOS):
+        rpm_if_up = rpm * (GEAR_RATIOS[gear] / GEAR_RATIOS[gear - 1])
+        if rpm_if_up > REDLINE * SHIFT:
+            return gear + 1
+
+    # TAKE CURRENT SPEED AND CHECK RPM IN PREVIOUS GEAR
+    if gear > 1:
+        rpm_if_down = rpm * (GEAR_RATIOS[gear - 2] / GEAR_RATIOS[gear - 1])
+        if rpm_if_down < REDLINE * SHIFT:
+            return gear - 1
+
+    return gear
+
 
 class SimpleAI(Driver):
     def decide(self, sensors):
@@ -12,28 +34,27 @@ class SimpleAI(Driver):
         track = sensors.get("track", [100] * 19)
         forward_range = track[9]
 
-        # Tighter corner (small forward_range) = boost steering gains
+        # Corner Handling
         corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
         steer = max(-1.0, min(1.0, angle * 0.5 * corner_factor - track_pos * 0.3 * corner_factor))
 
-        # Gear shifting
-        if rpm > 8000 and gear < 6:
-            gear += 1
-        elif rpm < 2500 and gear > 1:
-            gear -= 1
+        # Gear Shifts
+        gear = gearbox(rpm, gear)
+
+        # Avoid Spin Out
+        max_accel = min(1.0, 0.3 + gear * 0.1)
 
         if forward_range > 100:
-            accel = 1.0
+            accel = max_accel
         elif forward_range > 50:
-            accel = 0.5
+            accel = max_accel * 0.7
         else:
-            accel = 0.0
+            accel = max_accel * 0.35
 
-        # Graduated braking: start earlier and brake harder as corner tightens
-        if speed > 80 and forward_range < 80:
-            brake = 0.8
-        elif speed > 50 and forward_range < 50:
-            brake = 0.6
+        if speed > 120 and forward_range < 55:
+            brake = 0.5
+        elif speed > 80 and forward_range < 35:
+            brake = 0.3
         else:
             brake = 0
 
