@@ -1,23 +1,22 @@
 from driver import Driver
 
-GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]  
+GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]
 REDLINE = 18700
-SHIFT = 0.65
+UPSHIFT_THRESHOLD = 0.9   
+DOWNSHIFT_RPM = 8000       
 
 def gearbox(rpm, gear):
     if gear <= 0:
         return 1
 
-    # TAKE CURRENT SPEED AND CHECK RPM IN NEXT GEAR
-    if gear < len(GEAR_RATIOS):
-        rpm_if_up = rpm * (GEAR_RATIOS[gear] / GEAR_RATIOS[gear - 1])
-        if rpm_if_up > REDLINE * SHIFT:
-            return gear + 1
+    # Upshift: current RPM is near redline
+    if gear < len(GEAR_RATIOS) and rpm > REDLINE * UPSHIFT_THRESHOLD:
+        return gear + 1
 
-    # TAKE CURRENT SPEED AND CHECK RPM IN PREVIOUS GEAR
-    if gear > 1:
+    # Downshift: current RPM is too low
+    if gear > 1 and rpm < DOWNSHIFT_RPM:
         rpm_if_down = rpm * (GEAR_RATIOS[gear - 2] / GEAR_RATIOS[gear - 1])
-        if rpm_if_down < REDLINE * SHIFT:
+        if rpm_if_down < REDLINE:
             return gear - 1
 
     return gear
