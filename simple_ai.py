@@ -1,24 +1,18 @@
-from driver import Driver
+from driver import Driver, HOST, PORT
 
 GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]
 REDLINE = 18700
-UPSHIFT_THRESHOLD = 0.9   
-DOWNSHIFT_RPM = 8000       
 
-def gearbox(rpm, gear):
+
+def gearbox(rpm, gear, upshift_threshold, downshift_rpm):
     if gear <= 0:
         return 1
-
-    # Upshift: current RPM is near redline
-    if gear < len(GEAR_RATIOS) and rpm > REDLINE * UPSHIFT_THRESHOLD:
+    if gear < len(GEAR_RATIOS) and rpm > REDLINE * upshift_threshold:
         return gear + 1
-
-    # Downshift: current RPM is too low
-    if gear > 1 and rpm < DOWNSHIFT_RPM:
+    if gear > 1 and rpm < downshift_rpm:
         rpm_if_down = rpm * (GEAR_RATIOS[gear - 2] / GEAR_RATIOS[gear - 1])
         if rpm_if_down < REDLINE:
             return gear - 1
-
     return gear
 
 
@@ -28,32 +22,42 @@ class SimpleAI(Driver):
         track_pos = sensors.get("trackPos", 0)
         rpm = sensors.get("rpm", 0)
         gear = int(sensors.get("gear", 1))
-
         angle = sensors.get("angle", 0)
         track = sensors.get("track", [100] * 19)
         forward_range = track[9]
 
-        # Corner Handling
+        angle_gain       = self.params.get("angle_gain", 0.5)
+        position_gain    = self.params.get("position_gain", 0.3)
+        upshift_threshold= self.params.get("upshift_threshold", 0.9)
+        downshift_rpm    = self.params.get("downshift_rpm", 8000)
+        brake_emg_speed  = self.params.get("brake_emergency_speed", 50)
+        brake_emg_range  = self.params.get("brake_emergency_range", 18)
+        brake_hard_speed = self.params.get("brake_hard_speed", 120)
+        brake_hard_range = self.params.get("brake_hard_range", 55)
+        brake_soft_speed = self.params.get("brake_soft_speed", 80)
+        brake_soft_range = self.params.get("brake_soft_range", 35)
+
         corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
-        steer = max(-1.0, min(1.0, angle * 0.5 * corner_factor - track_pos * 0.3 * corner_factor))
+        steer = max(-1.0, min(1.0,
+            angle * angle_gain * corner_factor - track_pos * position_gain * corner_factor
+        ))
 
-        # Gear Shifts
-        gear = gearbox(rpm, gear)
-
-        # Avoid Spin Out
+        gear = gearbox(rpm, gear, upshift_threshold, downshift_rpm)
         max_accel = min(1.0, 0.3 + gear * 0.1)
 
         if forward_range > 100:
             accel = max_accel
         elif forward_range > 50:
-            accel = max_accel * 0.7
+            accel = max_accel * 0.85
         else:
-            accel = max_accel * 0.35
+            accel = max_accel * 0.5
 
-        if speed > 120 and forward_range < 55:
-            brake = 0.5
-        elif speed > 80 and forward_range < 35:
-            brake = 0.3
+        if speed > brake_emg_speed and forward_range < brake_emg_range:
+            brake = 0.85
+        elif speed > brake_hard_speed and forward_range < brake_hard_range:
+            brake = 0.65
+        elif speed > brake_soft_speed and forward_range < brake_soft_range:
+            brake = 0.4
         else:
             brake = 0
 
@@ -61,4 +65,11 @@ class SimpleAI(Driver):
 
 
 if __name__ == "__main__":
-    SimpleAI().run()
+    import argparse, json
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=PORT)
+    parser.add_argument("--host", default=HOST)
+    parser.add_argument("--name", default="SimpleAI")
+    parser.add_argument("--params", default="{}")
+    args = parser.parse_args()
+    SimpleAI(host=args.host, port=args.port, name=args.name, params=json.loads(args.params)).run()
