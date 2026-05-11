@@ -1,4 +1,4 @@
-from driver import Driver, HOST, PORT
+from driver import Driver, HOST, PORT, opponent_action
 
 GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]
 REDLINE = 18700
@@ -32,34 +32,46 @@ class SimpleAI(Driver):
         downshift_rpm    = self.params.get("downshift_rpm", 8000)
         brake_emg_speed  = self.params.get("brake_emergency_speed", 50)
         brake_emg_range  = self.params.get("brake_emergency_range", 18)
+        brake_emg_force  = self.params.get("brake_emergency_force", 0.85)
         brake_hard_speed = self.params.get("brake_hard_speed", 120)
         brake_hard_range = self.params.get("brake_hard_range", 55)
+        brake_hard_force = self.params.get("brake_hard_force", 0.65)
         brake_soft_speed = self.params.get("brake_soft_speed", 80)
         brake_soft_range = self.params.get("brake_soft_range", 35)
+        brake_soft_force = self.params.get("brake_soft_force", 0.4)
 
         corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
+
+        target_offset, extra_brake = opponent_action(sensors, self.params, self._opp_state)
         steer = max(-1.0, min(1.0,
-            angle * angle_gain * corner_factor - track_pos * position_gain * corner_factor
+            angle * angle_gain * corner_factor
+            - (track_pos - target_offset) * position_gain * corner_factor
         ))
 
         gear = gearbox(rpm, gear, upshift_threshold, downshift_rpm)
         max_accel = min(1.0, 0.3 + gear * 0.1)
 
+        straight_throttle      = self.params.get("straight_throttle", 1.0)
+        medium_corner_throttle = self.params.get("medium_corner_throttle", 0.85)
+        tight_corner_throttle  = self.params.get("tight_corner_throttle", 0.5)
+
         if forward_range > 100:
-            accel = max_accel
+            accel = max_accel * straight_throttle
         elif forward_range > 50:
-            accel = max_accel * 0.85
+            accel = max_accel * medium_corner_throttle
         else:
-            accel = max_accel * 0.5
+            accel = max_accel * tight_corner_throttle
 
         if speed > brake_emg_speed and forward_range < brake_emg_range:
-            brake = 0.85
+            brake = brake_emg_force
         elif speed > brake_hard_speed and forward_range < brake_hard_range:
-            brake = 0.65
+            brake = brake_hard_force
         elif speed > brake_soft_speed and forward_range < brake_soft_range:
-            brake = 0.4
+            brake = brake_soft_force
         else:
             brake = 0
+
+        brake = max(brake, extra_brake)
 
         return accel, brake, steer, gear
 
