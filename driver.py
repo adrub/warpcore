@@ -1,3 +1,4 @@
+import json
 import socket
 import threading
 
@@ -41,6 +42,49 @@ def build_command(accel, brake, steer, gear):
     return f"(accel {accel})(brake {brake})(steer {steer})(gear {gear})(clutch 0)(focus 0)(meta 0)"
 
 
+def opponent_action(sensors, params, state):
+    opp = sensors.get("opponents", [200.0] * 36)
+
+    fwd_dist   = min(opp[16:21])
+    left_gap   = min(opp[9:17])
+    right_gap  = min(opp[19:27])
+    left_side  = min(opp[13:17])
+    right_side = min(opp[19:23])
+
+    brake_dist      = params.get("opp_brake_dist", 8)
+    slow_dist       = params.get("opp_slow_dist", 20)
+    clear_dist      = params.get("opp_clear_dist", 30)
+    overtake_offset = params.get("opp_overtake_offset", 0.4)
+
+    if fwd_dist < brake_dist:
+        extra_brake = 0.6
+    elif fwd_dist < slow_dist:
+        extra_brake = 0.3 * (1 - (fwd_dist - brake_dist) / (slow_dist - brake_dist))
+    else:
+        extra_brake = 0
+
+    side = state["side"]
+
+    if side is None:
+        if fwd_dist < slow_dist:
+            side = "left" if left_gap > right_gap else "right"
+            state["side"] = side
+    else:
+        alongside = right_side < 15 if side == "left" else left_side < 15
+        if fwd_dist > clear_dist and not alongside:
+            state["side"] = None
+            side = None
+
+    if side == "left":
+        target_offset = -overtake_offset
+    elif side == "right":
+        target_offset = overtake_offset
+    else:
+        target_offset = 0.0
+
+    return target_offset, extra_brake
+
+
 class Driver:
     def __init__(self, host=HOST, port=PORT, params=None, name="Driver"):
         self.host = host
@@ -50,6 +94,9 @@ class Driver:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.settimeout(5.0)
         self.gear = 1
+        self._tel_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._tel_tick = 0
+        self._opp_state = {"side": None}
 
     def connect(self):
         print(f"[{self.name}] Connecting to TORCS at {self.host}:{self.port} ...")
@@ -105,11 +152,30 @@ class Driver:
                 accel, brake, steer, self.gear = self.decide(sensors)
                 cmd = build_command(accel, brake, steer, self.gear)
                 self.sock.sendto(cmd.encode(), (self.host, self.port))
+                self._tel_tick += 1
+                if self._tel_tick % 5 == 0:
+                    tel_port = self.params.get("telemetry_port")
+                    if tel_port:
+                        tel = {
+                            "name": self.name,
+                            "speed": sensors.get("speedX", 0),
+                            "gear": int(sensors.get("gear", 1)),
+                            "rpm": sensors.get("rpm", 0),
+                            "lap_time": sensors.get("curLapTime", 0),
+                            "last_lap": sensors.get("lastLapTime", 0),
+                            "race_pos": int(sensors.get("racePos", 0)),
+                            "damage": sensors.get("damage", 0),
+                            "dist_raced": sensors.get("distRaced", 0),
+                            "x": sensors.get("x", 0),
+                            "y": sensors.get("y", 0),
+                        }
+                        self._tel_sock.sendto(json.dumps(tel).encode(), ("127.0.0.1", int(tel_port)))
         except KeyboardInterrupt:
             print(f"[{self.name}] Stopped.")
         finally:
             self._running = False
             self.sock.close()
+            self._tel_sock.close()
 
 
 if __name__ == "__main__":
