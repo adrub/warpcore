@@ -1,4 +1,4 @@
-from driver import Driver, HOST, PORT
+from driver import Driver, HOST, PORT, opponent_action
 
 GEAR_RATIOS = [3.9, 2.9, 2.3, 1.87, 1.68, 1.54, 1.46]
 REDLINE = 18700
@@ -20,7 +20,7 @@ class PidAI(Driver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.integral = 0.0
-
+        self._prev_opp_side = None
     def decide(self, sensors):
         speed = sensors.get("speedX", 0)
         track_pos = sensors.get("trackPos", 0)
@@ -34,39 +34,50 @@ class PidAI(Driver):
         steer_ki         = self.params.get("steer_ki", 0.0)
         steer_kd         = self.params.get("steer_kd", 0.5)
         upshift_threshold= self.params.get("upshift_threshold", 0.9)
-        downshift_rpm    = self.params.get("downshift_rpm", 8000)
+        downshift_rpm    = self.params.get("downshift_rpm", 9500)
 
         corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
 
-        self.integral += track_pos
+        target_offset, extra_brake = opponent_action(sensors, self.params, self._opp_state)
+
+        if self._opp_state["side"] != self._prev_opp_side:
+            self.integral = 0.0
+            self._prev_opp_side = self._opp_state["side"]
+
+        error = track_pos - target_offset
+        self.integral += error
         self.integral = max(-2.0, min(2.0, self.integral))
 
-        steer = (steer_kd * angle - steer_kp * track_pos - steer_ki * self.integral) * corner_factor
+        steer = (steer_kd * angle - steer_kp * error - steer_ki * self.integral) * corner_factor
         steer = max(-1.0, min(1.0, steer))
 
         gear = gearbox(rpm, gear, upshift_threshold, downshift_rpm)
         max_accel = min(1.0, 0.3 + gear * 0.1)
 
-        if forward_range > 100:
-            accel = max_accel
-        elif forward_range > 50:
-            accel = max_accel * 0.85
-        else:
-            accel = max_accel * 0.5
+        straight_throttle      = self.params.get("straight_throttle", 1.0)
+        medium_corner_throttle = self.params.get("medium_corner_throttle", 0.85)
+        tight_corner_throttle  = self.params.get("tight_corner_throttle", 0.5)
 
-        brake_emg_speed   = self.params.get("brake_emergency_speed", 65)
-        brake_emg_range   = self.params.get("brake_emergency_range", 18)
-        brake_emg_force   = self.params.get("brake_emergency_force", 0.5)
-        brake_early_speed = self.params.get("brake_early_speed", 130)
-        brake_early_range = self.params.get("brake_early_range", 80)
-        brake_early_force = self.params.get("brake_early_force", 0.25)
-        brake_hard_speed  = self.params.get("brake_hard_speed", 100)
-        brake_hard_range  = self.params.get("brake_hard_range", 55)
-        brake_hard_force  = self.params.get("brake_hard_force", 0.35)
-        brake_soft_speed  = self.params.get("brake_soft_speed", 55)
-        brake_soft_range  = self.params.get("brake_soft_range", 25)
-        brake_soft_force  = self.params.get("brake_soft_force", 0.2)
-        centered_thresh   = self.params.get("centered_threshold", 0.3)
+        if forward_range > 100:
+            accel = max_accel * straight_throttle
+        elif forward_range > 50:
+            accel = max_accel * medium_corner_throttle
+        else:
+            accel = max_accel * tight_corner_throttle
+
+        brake_emg_speed   = self.params.get("brake_emergency_speed", 50)
+        brake_emg_range   = self.params.get("brake_emergency_range", 28)
+        brake_emg_force   = self.params.get("brake_emergency_force", 0.85)
+        brake_early_speed = self.params.get("brake_early_speed", 100)
+        brake_early_range = self.params.get("brake_early_range", 110)
+        brake_early_force = self.params.get("brake_early_force", 0.45)
+        brake_hard_speed  = self.params.get("brake_hard_speed", 75)
+        brake_hard_range  = self.params.get("brake_hard_range", 75)
+        brake_hard_force  = self.params.get("brake_hard_force", 0.65)
+        brake_soft_speed  = self.params.get("brake_soft_speed", 45)
+        brake_soft_range  = self.params.get("brake_soft_range", 35)
+        brake_soft_force  = self.params.get("brake_soft_force", 0.3)
+        centered_thresh   = self.params.get("centered_threshold", 0.5)
 
         centered = abs(track_pos) < centered_thresh
 
@@ -80,6 +91,8 @@ class PidAI(Driver):
             brake = brake_soft_force
         else:
             brake = 0
+
+        brake = max(brake, extra_brake)
 
         return accel, brake, steer, gear
 
