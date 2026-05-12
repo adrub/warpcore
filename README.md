@@ -1,149 +1,85 @@
-# IBM TORCS RACE SIM 
+# IBM Racing Simulation Platform
 
-## 1. Install WSL2
- 
-Open **PowerShell as Administrator** (search PowerShell → right-click → Run as administrator):
- 
-```powershell
-wsl --install
-```
- 
-Restart your PC when prompted. After restart, Ubuntu opens and asks you to pick a username and password — choose anything simple, you'll need the password for `sudo` commands later.
- 
-If WSL is already installed, just open Ubuntu from the Start menu. If you don't see Ubuntu or it doesn't work you can also install it from the Microsoft Store.
- 
----
- 
-## 2. Install dependencies
- 
-Open **Ubuntu** from the Start menu and run:
- 
-```bash
-sudo apt-get update
-```
- 
-Then run:
- 
-```bash
-sudo apt-get install -y build-essential git libglib2.0-dev libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev libpng-dev libjpeg-dev libvorbis-dev libopenal-dev libalut-dev libxi-dev libxmu-dev libxrender-dev libxrandr-dev libfreetype6-dev libxxf86vm-dev libplib-dev
-```
- 
-Wait for it to finish.
- 
----
- 
-## 3. Clone and compile TORCS
- 
-```bash
-cd ~
-git clone https://github.com/fmirus/torcs-1.3.7.git
-cd torcs-1.3.7
-export TORCS_BASE=$(pwd)
-export MAKE_DEFAULT=$TORCS_BASE/Make-default.mk
-make
-```
- 
-`make` takes about 15 minutes. You'll see lots of warnings — **ignore all warnings**, they're fine. Only stop if you see `error` and the build halts.
- 
-When make finishes:
- 
-```bash
-sudo make install
-sudo make datainstall
-```
- 
----
- 
-## 4. Check it worked
- 
-```bash
-ls /usr/local/lib/torcs/drivers/ | grep scr
-```
- 
-If it prints `scr_server`, it has installed properly.
- 
- Change the car models to the F1 car as follows:
- 
- ```bash
- sudo sed -i 's/car1-trb1/car1-ow1/g' /usr/local/share/games/torcs/drivers/scr_server/scr_server.xml
- ```
+AI-driven racing simulation built on TORCS — Python AI drivers, automated race orchestration, and a Mission Control web interface.
+
+<!-- Record with: peek / kazam on Linux, or ShareX on Windows capturing the WSL window.
+     Suggested capture: boot sequence → add a driver → launch race → hyperspace → live telemetry.
+     Save the recording as docs/demo.gif then remove this comment. -->
+![Mission Control demo](docs/demo.gif)
 
 ---
 
-## 5. Running TORCS
- 
-### Clone the repo
- 
-Open **Ubuntu** from the Start menu and run the following. Ensure you have Git installed:
- 
+## What is this?
+
+A TORCS-based racing simulation platform where configurable AI drivers compete on track. A Flask web server acts as Mission Control — managing driver configuration, launching races automatically, and displaying live telemetry. Two AI driver types are included out of the box, and external drivers can be dropped in without modifying the platform.
+
+---
+
+## Features
+
+- **Mission Control UI** — IBM terminal-style web interface for configuring and launching races
+- **Two AI drivers** — SimpleAI (proportional steering) and PidAI (full PID controller)
+- **Automated race launch** — configures TORCS and starts all driver processes in one click
+- **Live telemetry** — speed, gear, RPM, lap times, and race position updated every second
+- **Race history** — lap-by-lap record with best lap highlighting
+- **Hyperspace launch sequence** — cinematic warp effect on race start
+- **External driver support** — drop a script into `plugins/` and it appears as a driver type
+
+---
+
+## Quick Start
+
+> **Prerequisite:** TORCS must be installed first — see the [Installation Guide](docs/installation.md).
+
 ```bash
-cd ~
+# Clone the repo
 git clone https://github.com/adrub/warpcore.git
 cd warpcore
+
+# Install Python dependency
+pip install flask
+
+# Start Mission Control
+python3 client.py
 ```
- 
-### VS Code Setup
 
-Install the Python, WSL and Remote Explorer extensions. 
+Open [http://localhost:5000](http://localhost:5000) in your browser.
 
-To connect VS Code to Ubuntu, open VS Code on Windows and click the **Remote Explorer** icon in the left sidebar (or press `Ctrl+Shift+P` and search "WSL: Connect to WSL"). Click on your Ubuntu distro to connect. Once connected, the bottom-left corner of VS Code will show **WSL: Ubuntu**.
- 
-Then open the project: **File → Open Folder** → navigate to `/home/YOUR_USERNAME/warpcore` → click OK. You'll see all the project files in the sidebar.
+From there: add drivers, configure parameters, and click **Launch Race** — TORCS and all driver processes start automatically.
 
-The integrated terminal in VS Code (`` Ctrl+` ``) will now be an Ubuntu terminal — you'll use this to run the Python driver.
-
-## 6. Running a Race
- 
-You need **two terminals open at the same time**:
- 
-### Terminal 1 — Ubuntu terminal (for TORCS)
- 
-Open Ubuntu from the **Start menu** (not the VS Code terminal) and run:
- 
-```bash
-torcs
-```
- 
-A TORCS window appears. Set up the race:
- 
-1. **Race → Quick Race → Configure Race**
-2. Select the **Corkscrew** track
-3. Add **scr_server 1** as a competitor
-4. Set laps to 3
-5. Click **Accept → New Race**
-The car freezes on the grid. The terminal shows `Waiting for request on port 3001`. Leave it running.
- 
-### Terminal 2 — VS Code terminal (for Python)
- 
-In VS Code press `` Ctrl+` `` to open the integrated terminal. Run:
- 
-```bash
-python3 filename.py
-```
- 
-The car should start moving in TORCS and you'll see debug output in the VS Code terminal.
- 
-**Don't run TORCS from the VS Code terminal** — it needs its own terminal window for the graphical display.
- 
 ---
 
-## 7. Other
+## Drivers
 
-**`make` fails with "cannot find -lSOMETHING"**
+| Driver | Description |
+|---|---|
+| **SimpleAI** | Proportional steering on track position and angle. Multi-tier braking logic. |
+| **PidAI** | Full PID steering controller with integral windup clamp. Early braking tier. |
 
-You're missing a library. Run `sudo apt-get install -y libSOMETHING-dev` replacing SOMETHING with whatever it says is missing, then run `make` again.
+Both drivers support tunable parameters via the UI sliders, saved profiles, and opponent avoidance behaviour.
 
-**`scr_server` not in TORCS driver list**
+**External drivers:** participants can bring their own AI by dropping a Python script into `plugins/`. See [docs/external_drivers.md](docs/external_drivers.md) for the interface contract.
 
-The compile didn't fully work. Go back to the torcs folder and re-run:
+---
 
-```bash
-cd ~/torcs-1.3.7
-export TORCS_BASE=$(pwd)
-export MAKE_DEFAULT=$TORCS_BASE/Make-default.mk
-make
-sudo make install
-sudo make datainstall
+## Project Structure
+
+```
+warpcore/
+├── client.py              # Flask server — race orchestration, telemetry, UI backend
+├── driver.py              # Base Driver class — TORCS UDP protocol, telemetry
+├── simple_ai.py           # SimpleAI driver
+├── pid_ai.py              # PidAI driver
+├── templates/
+│   └── index.html         # Mission Control frontend
+├── plugins/               # Drop external driver scripts here
+└── docs/
+    ├── installation.md    # TORCS setup guide
+    └── external_drivers.md # External driver interface spec
 ```
 
-Also make sure GitHub CLI is installed in Ubuntu to push changes.
+---
+
+## Installation
+
+Full TORCS setup (WSL2, dependencies, compile, install): [docs/installation.md](docs/installation.md)
