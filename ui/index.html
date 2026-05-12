@@ -1213,9 +1213,18 @@
       await wait(600);
       line('INITIATING MISSION CONTROL...', 'boot-init');
       await wait(900);
+
+      // Pre-hide UI so there's no flash between overlay lifting and hyperspace
+      document.body.classList.add('warp-active');
       overlay.classList.add('fade-out');
       await wait(750);
       overlay.style.display = 'none';
+
+      // Hyperspace plays on the canvas, UI hidden until it completes
+      if (typeof window.triggerHyperspace === 'function') {
+        await new Promise(resolve => window.triggerHyperspace(resolve));
+      }
+      document.body.classList.remove('warp-active');
     }
 
     if (!sessionStorage.getItem('wc-booted')) {
