@@ -9,7 +9,7 @@ import time
 import xml.etree.ElementTree as ET
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='ui')
 
 CONFIG_FILE   = os.path.join(os.path.dirname(__file__), "race_config.json")
 PROFILES_FILE = os.path.join(os.path.dirname(__file__), "profiles.json")
