@@ -1,3 +1,5 @@
+# main.py
+
 import time
 from mqtt_client import WarpCoreMQTTClient
 from race_controller import RaceController
@@ -5,7 +7,7 @@ from race_controller import RaceController
 
 def main():
     mqtt_client = WarpCoreMQTTClient(
-        broker_ip="172.20.10.4",
+        broker_ip="172.20.10.3",
         port=1883
     )
 
