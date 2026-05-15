@@ -6,496 +6,23 @@
   <title>Warp-Core Racing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg:       #000000;
-      --bg-card:  #030303;
-      --bg-input: #060606;
-      --blue:     #0f62fe;
-      --cyan:     #d0d0d0;
-      --text:     #d0d0d0;
-      --muted:    rgba(255,255,255,0.28);
-      --green:    #3ddc67;
-      --red:      #ff3d4d;
-      --gold:     #ffd060;
-      --border:   rgba(255,255,255,0.1);
-      --glow:     rgba(255,255,255,0.04);
-      --amber:     #d0d0d0;
-      --amber-dim: rgba(255,255,255,0.4);
-    }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/effects.css') }}">
 
-    body {
-      font-family: 'IBM Plex Mono', monospace;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 13px;
-      min-height: 100vh;
-      padding: 28px 28px 60px;
-      overflow-x: hidden;
+  <!-- Runs before paint - hides the boot overlay on subsequent page loads in the same session -->
+  <script>
+    if (sessionStorage.getItem('wc-booted')) {
+      document.documentElement.classList.add('booted');
     }
-
-    /* ── Space canvas ── */
-    #space-bg {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -2;
-      pointer-events: none;
-    }
-
-    /* ── Scanlines ── */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -1;
-      background: repeating-linear-gradient(
-        to bottom,
-        transparent 0, transparent 3px,
-        rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
-      );
-    }
-
-    /* ── Terminal ID bar ── */
-    .terminal-id-bar {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(15,98,254,0.07);
-      border-bottom: 1px solid rgba(15,98,254,0.22);
-      padding: 4px 28px;
-      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
-      color: var(--muted);
-      margin: -28px -28px 28px;
-    }
-    .tid-right { display: flex; gap: 20px; }
-
-    /* ── Header ── */
-    .site-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 44px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-    }
-    .header-title {
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      color: #fff;
-      text-shadow: 0 0 40px rgba(255,255,255,0.2), 0 0 80px rgba(255,255,255,0.08);
-    }
-    .header-sub {
-      font-size: 9px;
-      font-weight: 300;
-      letter-spacing: 0.32em;
-      color: var(--muted);
-      margin-top: 6px;
-      text-transform: uppercase;
-    }
-    .header-sys {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      color: var(--green);
-      margin-top: 8px;
-      text-transform: uppercase;
-    }
-    .header-sys::before { content: '> '; color: rgba(255,255,255,0.4); }
-    .header-ibm {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .header-ibm-logo {
-      display: flex;
-      align-items: center;
-    }
-    .header-ibm-text {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .ibm-label {
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      color: #0f62fe;
-      line-height: 1;
-    }
-    .ibm-powered {
-      font-size: 8px;
-      letter-spacing: 0.24em;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-    .btn-boot-replay {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 0;
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 9px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      padding: 5px 10px;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-      align-self: flex-end;
-    }
-    .btn-boot-replay:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
-
-    /* ── Section headings ── */
-    section { margin-bottom: 44px; }
-    h2 {
-      display: flex;
-      align-items: center;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: #ffffff;
-      margin-bottom: 20px;
-      padding: 0;
-      border: none;
-      white-space: nowrap;
-    }
-    h2::before { content: '══ '; color: rgba(255,255,255,0.4); letter-spacing: 0; }
-    h2::after  { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.15); margin-left: 10px; }
-
-    /* ── Cards ── */
-    .cards { display: flex; flex-wrap: wrap; gap: 16px; }
-    .card {
-      background: #030303;
-      border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 0;
-      padding: 18px;
-      width: 340px;
-      flex-shrink: 0;
-    }
-    .card-header {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.08);
-      margin: -18px -18px 0;
-      padding: 7px 18px;
-      border-bottom: 1px solid rgba(255,255,255,0.22);
-      cursor: pointer;
-      user-select: none;
-    }
-    .card-collapse-icon {
-      font-size: 8px; color: rgba(255,255,255,0.35);
-      transition: transform 0.25s ease;
-      flex-shrink: 0;
-    }
-    .card.collapsed .card-collapse-icon { transform: rotate(-90deg); }
-    .card-body {
-      overflow: hidden;
-      max-height: 1500px;
-      padding-top: 14px;
-      transition: max-height 0.3s ease, padding-top 0.3s ease;
-    }
-    .card.collapsed .card-body { max-height: 0; padding-top: 0; }
-    .card-title {
-      font-weight: 600; font-size: 12px;
-      color: #ffffff; letter-spacing: 0.1em; text-transform: uppercase;
-      text-shadow: 0 0 8px rgba(255,255,255,0.3);
-    }
-    .card-title::before { content: '■ '; font-size: 8px; color: rgba(255,255,255,0.5); vertical-align: middle; }
-    .card-meta { display: flex; gap: 6px; margin-top: 5px; align-items: center; }
-    .badge { font-size: 9px; border-radius: 1px; padding: 2px 7px; font-weight: 400; letter-spacing: 0.08em; }
-    .badge-type { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.18); }
-    .badge-port { background: transparent; color: var(--muted); border: 1px solid rgba(255,255,255,0.08); }
-
-    /* ── Inputs ── */
-    .name-row { margin-bottom: 12px; }
-    .name-row label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--amber-dim); display: block; margin-bottom: 4px; }
-    .name-row label::after { content: ' . . . . . . . . . .'; color: rgba(255,255,255,0.12); letter-spacing: 0; }
-    .name-row input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-      border-radius: 0;
-      color: #d0d0d0;
-      padding: 5px 0;
-      font-size: 12px;
-      font-family: inherit;
-      outline: none;
-      letter-spacing: 0.04em;
-    }
-    .name-row input:focus { border-bottom-color: #ffffff; box-shadow: none; }
-
-    /* ── Param sections ── */
-    .param-section { border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 0; }
-    .param-section > summary {
-      font-size: 9px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
-      color: var(--muted); cursor: pointer; list-style: none;
-      display: flex; align-items: center; gap: 7px; padding: 5px 0; user-select: none;
-    }
-    .param-section > summary::before { content: '▶'; font-size: 7px; transition: transform 0.15s; color: rgba(255,255,255,0.4); }
-    .param-section[open] > summary::before { transform: rotate(90deg); }
-    .param-section[open] > summary { color: var(--amber); }
-    .param-section > summary::-webkit-details-marker { display: none; }
-
-    /* ── Sliders ── */
-    .slider-rows { padding: 8px 0 4px; display: flex; flex-direction: column; gap: 11px; }
-    .slider-row { display: flex; flex-direction: column; gap: 4px; }
-    .slider-label-row { display: flex; justify-content: space-between; align-items: center; }
-    .slider-label { font-size: 11px; font-weight: 300; color: var(--amber-dim); }
-    .slider-val { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--cyan); min-width: 36px; text-align: right; }
-    input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 2px;
-      background: rgba(255,255,255,0.15);
-      outline: none;
-      cursor: pointer;
-      border-radius: 0;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 10px;
-      height: 10px;
-      background: #ffffff;
-      transform: rotate(45deg);
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 0 6px rgba(255,255,255,0.5);
-    }
-
-    /* ── Advanced section ── */
-    .advanced-section { border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 0; margin-top: 2px; }
-    .advanced-section > summary {
-      font-size: 9px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
-      color: rgba(255,255,255,0.35); cursor: pointer; list-style: none;
-      display: flex; align-items: center; gap: 7px; padding: 5px 0; user-select: none;
-    }
-    .advanced-section > summary::before { content: '▶'; font-size: 7px; color: rgba(255,255,255,0.25); transition: transform 0.15s; }
-    .advanced-section[open] > summary::before { transform: rotate(90deg); }
-    .advanced-section[open] > summary { color: var(--gold); }
-    .advanced-section > summary::-webkit-details-marker { display: none; }
-    .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 8px 0 4px; }
-    .param-group label { display: block; font-size: 9px; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 2px; text-transform: uppercase; }
-    .param-group input[type="number"] {
-      width: 100%;
-      background: var(--bg-input);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 0;
-      color: #d0d0d0;
-      padding: 4px 6px;
-      font-size: 11px;
-      font-family: inherit;
-      outline: none;
-    }
-    .param-group input[type="number"]:focus { border-color: rgba(255,255,255,0.6); }
-
-    /* ── Card actions ── */
-    .card-actions { display: flex; gap: 8px; margin-top: 14px; }
-
-    /* ── Profile row ── */
-    .profile-row {
-      display: flex; gap: 6px; align-items: center; margin-top: 12px; flex-wrap: wrap;
-      border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;
-    }
-    .profile-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-    .profile-row select, .profile-row input[type="text"] {
-      background: var(--bg-input);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 0;
-      color: var(--text);
-      padding: 4px 7px;
-      font-size: 11px;
-      font-family: inherit;
-      outline: none;
-    }
-    .profile-row select { max-width: 110px; }
-    .profile-row input[type="text"] { width: 90px; }
-
-    /* ── Buttons ── */
-    .btn {
-      padding: 7px 16px;
-      border: none;
-      border-radius: 1px;
-      font-size: 11px;
-      font-family: inherit;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: opacity 0.15s, box-shadow 0.15s;
-      white-space: nowrap;
-    }
-    .btn:hover { opacity: 0.85; }
-    .btn-save   { background: transparent; color: #d0d0d0; border: 1px solid rgba(255,255,255,0.35); }
-    .btn-save::before  { content: '[ '; color: rgba(255,255,255,0.4); }
-    .btn-save::after   { content: ' ]'; color: rgba(255,255,255,0.4); }
-    .btn-save:hover { box-shadow: 0 0 10px rgba(255,255,255,0.15); opacity: 1; background: rgba(255,255,255,0.04); }
-    .btn-remove { background: transparent; color: var(--red); border: 1px solid rgba(218,30,40,0.35); }
-    .btn-remove::before { content: '[ '; color: rgba(255,80,80,0.5); }
-    .btn-remove::after  { content: ' ]'; color: rgba(255,80,80,0.5); }
-    .btn-launch { background: transparent; color: var(--green); border: 1px solid rgba(61,220,103,0.5); font-size: 12px; padding: 10px 32px; letter-spacing: 0.12em; }
-    .btn-launch::before { content: '> '; color: rgba(61,220,103,0.6); letter-spacing: 0; }
-    .btn-launch:hover { box-shadow: 0 0 16px rgba(61,220,103,0.3); opacity: 1; background: rgba(61,220,103,0.05); }
-    .btn-launch:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-stop { background: transparent; color: var(--text); border: 1px solid var(--border); font-size: 12px; padding: 10px 32px; }
-    .btn-stop::before { content: '> '; color: rgba(255,255,255,0.3); letter-spacing: 0; }
-    .btn-sm {
-      padding: 4px 10px;
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 0;
-      font-size: 10px;
-      font-family: inherit;
-      letter-spacing: 0.06em;
-      cursor: pointer;
-      background: transparent;
-      color: var(--muted);
-      transition: opacity 0.15s;
-    }
-    .btn-sm:hover { opacity: 1; border-color: rgba(255,255,255,0.5); color: #fff; }
-    .btn-sm-red { color: var(--red); border-color: rgba(218,30,40,0.3); }
-
-    /* ── Add driver form ── */
-    .add-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 18px; }
-    .add-form .fg { display: flex; flex-direction: column; gap: 4px; }
-    .add-form label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-    .add-form input[type="text"], .add-form select {
-      background: var(--bg-input);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 0;
-      color: var(--text);
-      padding: 7px 10px;
-      font-size: 12px;
-      font-family: inherit;
-      outline: none;
-    }
-    .add-form input[type="text"]:focus, .add-form select:focus { border-color: rgba(255,255,255,0.5); }
-    .add-form select option { background: var(--bg-card); }
-    .btn-add {
-      background: rgba(255,255,255,0.05);
-      color: #d0d0d0;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 7px 20px;
-      border-radius: 0;
-      font-size: 11px;
-      font-family: inherit;
-      letter-spacing: 0.08em;
-      cursor: pointer;
-      transition: background 0.15s, box-shadow 0.15s;
-    }
-    .btn-add::before { content: '+ '; color: rgba(255,255,255,0.5); }
-    .btn-add:hover { background: rgba(255,255,255,0.08); box-shadow: 0 0 8px rgba(255,255,255,0.1); }
-
-    /* ── Race controls ── */
-    .controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-    .status-badge { font-size: 10px; letter-spacing: 0.12em; padding: 4px 0; font-weight: 400; background: none; border: none; }
-
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.55; }
-    }
-    .status-running { color: var(--green); animation: pulse-glow 2s ease-in-out infinite; }
-    .status-running::before { content: 'STATUS: '; color: rgba(255,255,255,0.35); font-weight: 300; }
-    .status-stopped { color: var(--muted); }
-    .status-stopped::before { content: 'STATUS: '; color: rgba(255,255,255,0.2); font-weight: 300; }
-
-    /* ── Tables ── */
-    .tel-table { width: 100%; border-collapse: collapse; border: 1px solid rgba(255,255,255,0.12); }
-    .tel-table th {
-      text-align: left;
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.85);
-      text-shadow: 0 0 5px rgba(255,255,255,0.2);
-      padding: 8px 12px;
-      border-bottom: 2px solid rgba(255,255,255,0.22);
-      border-right: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.05);
-    }
-    .tel-table th:last-child { border-right: none; }
-    .tel-table td {
-      padding: 9px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      border-right: 1px solid rgba(255,255,255,0.05);
-      font-variant-numeric: tabular-nums;
-      font-size: 12px;
-      font-weight: 300;
-    }
-    .tel-table td:last-child { border-right: none; }
-    .tel-table tr:last-child td { border-bottom: none; }
-    .tel-table tr:hover td { background: rgba(255,255,255,0.03); }
-    .td-name { font-weight: 600; color: #fff; }
-    .td-best { color: var(--gold); }
-    .no-data { color: rgba(255,255,255,0.25); font-size: 12px; padding: 16px 0; font-weight: 300; letter-spacing: 0.05em; }
-    .no-data::before { content: '> '; color: rgba(255,255,255,0.2); }
-    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0 12px; }
-
-    /* ── PF key strip ── */
-    .pfk-strip {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 5;
-      background: rgba(0,0,0,0.96);
-      border-top: 1px solid rgba(255,255,255,0.15);
-      display: flex; align-items: center; gap: 20px;
-      padding: 5px 20px;
-      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      backdrop-filter: blur(6px);
-    }
-    .pfk {
-      background: var(--blue); color: #fff;
-      padding: 1px 5px; font-weight: 600; font-size: 9px;
-      margin-right: 2px; cursor: default;
-    }
-    .pfk[onclick] { cursor: pointer; }
-    .pfk-coord { margin-left: auto; color: var(--muted); font-size: 9px; }
-
-    /* ── Warp-active: fade UI, leave only the canvas ── */
-    .terminal-id-bar, header.site-header, section, footer.pfk-strip {
-      transition: opacity 0.5s ease;
-    }
-    body.warp-active .terminal-id-bar,
-    body.warp-active header.site-header,
-    body.warp-active section,
-    body.warp-active footer.pfk-strip {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    /* ── Boot overlay ── */
-    #boot-overlay {
-      position: fixed; inset: 0; z-index: 999;
-      background: #000;
-      display: flex; align-items: center; justify-content: center;
-      transition: opacity 0.7s ease;
-    }
-    #boot-overlay.fade-out { opacity: 0; pointer-events: none; }
-    #boot-box { width: min(620px, 90vw); font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
-    #boot-ibm-logo { filter: drop-shadow(0 0 10px rgba(15,98,254,0.6)); }
-    .boot-title { font-size: 20px; font-weight: 600; color: #fff; letter-spacing: 0.12em; margin: 14px 0 4px; }
-    .boot-sub   { font-size: 9px; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; }
-    .boot-sep   { border-top: 1px solid rgba(15,98,254,0.25); margin: 14px 0 10px; }
-    .boot-section { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-    .boot-row   { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; line-height: 1.6; }
-    .boot-label { color: var(--cyan); width: 210px; flex-shrink: 0; letter-spacing: 0.05em; }
-    .boot-bar   { letter-spacing: -1px; font-size: 12px; }
-    .boot-bar-empty { color: #1a2232; }
-    .boot-bar-fill  { color: var(--blue); }
-    .boot-status-ok   { color: var(--green); font-weight: 600; margin-left: 6px; }
-    .boot-status-warn { color: var(--gold);  font-weight: 600; margin-left: 6px; }
-    .boot-final { color: var(--green); font-weight: 600; letter-spacing: 0.08em; margin-top: 14px; }
-    .boot-init  { color: var(--text); margin-top: 6px; }
-    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
-    #boot-cursor { color: var(--text); display: inline-block; animation: blink 0.7s step-end infinite; }
-  </style>
+  </script>
 </head>
 <body>
 <canvas id="space-bg"></canvas>
 
-<!-- ── BOOT OVERLAY ── -->
+<!-- Boot overlay (shown once per session, replayable via PF3) -->
 <div id="boot-overlay" data-drivers="{{ cars|length }}">
   <div id="boot-box">
     <svg id="boot-ibm-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 31" height="52" fill="#0f62fe" aria-label="IBM">
@@ -517,14 +44,14 @@
       <rect x="35" y="28" width="21" height="3"/>
     </svg>
     <div class="boot-title">WARP-CORE RACING PLATFORM</div>
-    <div class="boot-sub">Mission Control · Tactical Racing Systems · v1.0</div>
+    <div class="boot-sub">Mission Control · Tactical Racing System · v1.0</div>
     <div class="boot-sep"></div>
     <div id="boot-lines"></div>
     <div id="boot-cursor">█</div>
   </div>
 </div>
 
-<!-- ── TERMINAL ID BAR ── -->
+<!-- Top terminal ID bar -->
 <div class="terminal-id-bar">
   <span>IBM Warp-Core Terminal v1.0</span>
   <div class="tid-right">
@@ -533,7 +60,6 @@
   </div>
 </div>
 
-<!-- ── HEADER ── -->
 <header class="site-header">
   <div>
     <div class="header-title">MISSION CONTROL</div>
@@ -543,17 +69,14 @@
   <div class="header-ibm">
     <div class="header-ibm-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 31" height="44" fill="#0f62fe" aria-label="IBM">
-        <!-- I -->
         <rect x="0"  y="0"  width="8" height="3"/><rect x="0"  y="4"  width="8" height="3"/>
         <rect x="0"  y="8"  width="8" height="3"/><rect x="0"  y="12" width="8" height="3"/>
         <rect x="0"  y="16" width="8" height="3"/><rect x="0"  y="20" width="8" height="3"/>
         <rect x="0"  y="24" width="8" height="3"/><rect x="0"  y="28" width="8" height="3"/>
-        <!-- B -->
         <rect x="14" y="0"  width="13" height="3"/><rect x="14" y="4"  width="15" height="3"/>
         <rect x="14" y="8"  width="15" height="3"/><rect x="14" y="12" width="13" height="3"/>
         <rect x="14" y="16" width="13" height="3"/><rect x="14" y="20" width="15" height="3"/>
         <rect x="14" y="24" width="15" height="3"/><rect x="14" y="28" width="13" height="3"/>
-        <!-- M -->
         <rect x="35" y="0"  width="21" height="3"/>
         <rect x="35" y="4"  width="5"  height="3"/><rect x="43" y="4"  width="5" height="3"/><rect x="51" y="4"  width="5" height="3"/>
         <rect x="35" y="8"  width="4"  height="3"/><rect x="45" y="8"  width="3" height="3"/><rect x="52" y="8"  width="4" height="3"/>
@@ -566,13 +89,12 @@
     </div>
     <div class="header-ibm-text">
       <div class="ibm-label">IBM</div>
-      <div class="ibm-powered">Powered by Granite</div>
+      <div class="ibm-powered">To Dare Is To Do</div>
     </div>
     <button class="btn-boot-replay" onclick="replayBoot()">⟳ Boot Log</button>
   </div>
 </header>
 
-<!-- ── DRIVERS ── -->
 <section>
   <h2>Drivers</h2>
   <div class="cards">
@@ -691,7 +213,6 @@
   {% endif %}
 </section>
 
-<!-- ── RACE CONTROL ── -->
 <section>
   <h2>Race Control</h2>
   <div class="controls">
@@ -715,7 +236,6 @@
   {% endif %}
 </section>
 
-<!-- ── TELEMETRY ── -->
 <section>
   <h2>Live Telemetry</h2>
   <table class="tel-table">
@@ -731,7 +251,6 @@
   </table>
 </section>
 
-<!-- ── RACE HISTORY ── -->
 <section>
   <h2>Race History</h2>
   <table class="tel-table">
@@ -744,499 +263,22 @@
   </table>
 </section>
 
+<footer class="pfk-strip">
+  <span><span class="pfk">PF1</span>HELP</span>
+  <span><span class="pfk" onclick="replayBoot()">PF3</span>BOOT LOG</span>
+  <span><span class="pfk" onclick="launchWithHyperspace()">PF5</span>LAUNCH RACE</span>
+  <span><span class="pfk" onclick="fetch('/stop',{method:'POST'}).then(()=>location.reload())">PF12</span>ABORT RACE</span>
+  <span class="pfk-coord">ROW:01 COL:01 &nbsp; IBM WARP-CORE TERMINAL</span>
+</footer>
+
+<!-- defer keeps the load order: utils → space (exposes triggerHyperspace) → telemetry → boot -->
+<script src="{{ url_for('static', filename='js/utils.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/space.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/telemetry.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/boot.js') }}" defer></script>
+
 <script>
-  function fmt(v, dp) { return typeof v === 'number' ? v.toFixed(dp) : '—'; }
-
-  function fmtTime(s) {
-    if (!s || typeof s !== 'number') return '—';
-    const m = Math.floor(s / 60);
-    const sec = (s % 60).toFixed(2).padStart(5, '0');
-    return m > 0 ? `${m}:${sec}` : `${sec}s`;
-  }
-
-  function updateSlider(el) {
-    document.getElementById(el.dataset.valId).textContent =
-      parseFloat(el.value).toFixed(parseInt(el.dataset.dp));
-  }
-
-  function deleteProfile(btn) {
-    const sel = document.getElementById('prof-sel-' + btn.dataset.idx);
-    if (!sel) return;
-    const f = document.createElement('form');
-    f.method = 'post';
-    f.action = '/profile/delete/' + btn.dataset.dtype + '/' + encodeURIComponent(sel.value);
-    document.body.appendChild(f);
-    f.submit();
-  }
-
-  const CAR_COLORS = ['#0f62fe','#00b4d8','#24a148','#f1c21b','#8a3ffc','#fa4d56','#08bdba','#ff7eb6','#d2a106','#007d79'];
-  const colorMap = {};
-  let colorIdx = 0;
-  function carColor(name) {
-    if (!colorMap[name]) colorMap[name] = CAR_COLORS[colorIdx++ % CAR_COLORS.length];
-    return colorMap[name];
-  }
-
-  async function refreshTelemetry() {
-    try {
-      const data = await fetch('/telemetry').then(r => r.json());
-      const entries = Object.values(data);
-      if (!entries.length) return;
-      entries.sort((a, b) => (a.race_pos || 99) - (b.race_pos || 99));
-      document.getElementById('tel-body').innerHTML = entries.map(e => {
-        const col = carColor(e.name);
-        return `<tr>
-          <td class="td-name" style="border-left:3px solid ${col};padding-left:9px">${e.name}</td>
-          <td>${fmt(e.speed, 1)}</td>
-          <td>${e.gear ?? '—'}</td>
-          <td>${fmt(e.rpm, 0)}</td>
-          <td>${fmtTime(e.lap_time)}</td>
-          <td class="td-best">${e.best_lap ? fmtTime(e.best_lap) : '—'}</td>
-          <td>${e.laps ?? 0}</td>
-          <td>${e.race_pos || '—'}</td>
-          <td>${fmt(e.damage, 0)}</td>
-        </tr>`;
-      }).join('');
-    } catch (_) {}
-  }
-
-  async function refreshHistory() {
-    try {
-      const data = await fetch('/history').then(r => r.json());
-      if (!data.length) return;
-      document.getElementById('history-body').innerHTML = [...data].reverse().map(e => {
-        const col = colorMap[e.name] || '#0f62fe';
-        return `<tr>
-          <td class="td-name" style="border-left:3px solid ${col};padding-left:9px">${e.name}</td>
-          <td>${e.lap}</td>
-          <td class="td-best">${fmtTime(e.lap_time)}</td>
-          <td style="color:var(--muted);font-size:11px">${(e.timestamp || '').replace('T', ' ')}</td>
-        </tr>`;
-      }).join('');
-    } catch (_) {}
-  }
-
-  setInterval(refreshTelemetry, 1000);
-  setInterval(refreshHistory, 5000);
-  refreshTelemetry();
-  refreshHistory();
-
-  (function () {
-    const el = document.getElementById('tid-time');
-    function tick() {
-      if (!el) return;
-      const n = new Date();
-      const t = n.toTimeString().slice(0, 8);
-      const d = n.toLocaleDateString('en-GB');
-      el.textContent = t + '  ' + d;
-    }
-    tick(); setInterval(tick, 1000);
-  })();
-
-  // ── Space background ──
-  (function () {
-    const canvas = document.getElementById('space-bg');
-    const ctx = canvas.getContext('2d');
-    const WARP_MS   = 3200;
-    const ROT_SPEED = 0.00014;
-
-    // Hyperspace departure timings (ms)
-    const HS_BUILDUP = 1600;
-    const HS_JUMP    = 1100;
-    const HS_FLASH   = 380;
-    const HS_TOTAL   = HS_BUILDUP + HS_JUMP + HS_FLASH;
-
-    // 300 chunky white vector rays — Asteroids / Star Wars arcade style
-    const HS_RAYS = Array.from({ length: 300 }, () => {
-      const angle  = Math.random() * Math.PI * 2;
-      const speed  = 0.40 + Math.random() * 1.0;
-      const bright = Math.random();
-      let bri, w;
-      if      (bright > 0.85) { bri = 0.90; w = 2.5 + Math.random() * 1.5; }
-      else if (bright > 0.55) { bri = 0.55 + Math.random() * 0.25; w = 1.2 + Math.random() * 0.8; }
-      else                    { bri = 0.20 + Math.random() * 0.30; w = 0.6 + Math.random() * 0.5; }
-      return { angle, speed, r: 255, g: 255, b: 255, bri, w };
-    });
-
-    // ── Space background ──
-    function rnd(a, b) { return a + Math.random() * (b - a); }
-
-    function starColor() {
-      const v = Math.random();
-      if (v < 0.55) return [210, 225, 255];  // blue-white
-      if (v < 0.78) return [255, 255, 255];  // pure white
-      if (v < 0.92) return [255, 245, 165];  // yellow
-      return [255, 180, 95];                  // orange
-    }
-
-    const stars = Array.from({ length: 180 }, () => {
-      const bright = Math.random();
-      let size, bri;
-      if      (bright > 0.96) { size = rnd(2.2, 3.2); bri = rnd(0.85, 1.0); }
-      else if (bright > 0.82) { size = rnd(1.2, 2.0); bri = rnd(0.55, 0.85); }
-      else                    { size = rnd(0.3, 1.0);  bri = rnd(0.18, 0.55); }
-      const [sr, sg, sb] = starColor();
-      return {
-        fx: Math.random(), fy: Math.random(),
-        r: sr, g: sg, b: sb, bri, size,
-        ts: rnd(0.004, 0.022),
-        to: rnd(0, Math.PI * 2),
-      };
-    });
-
-    // Each nebula: multi-layer offset radial gradients → organic shape + colour zones
-    // layers: ox/oy = offset as fraction of baseR, rs = layer radius fraction, a = peak alpha
-    const NEBULAS = [
-      // Trifid-style: cyan outer → hot rose inner → orange wisp → warm white core
-      { fx: 0.10, fy: 0.20, fr: 0.32, layers: [
-        { ox:  0.00, oy:  0.00, rs: 1.00, r:   0, g: 170, b: 220, a: 0.11 },
-        { ox:  0.18, oy: -0.12, rs: 0.60, r: 210, g:  50, b: 130, a: 0.15 },
-        { ox: -0.14, oy:  0.20, rs: 0.45, r: 230, g:  85, b:  30, a: 0.09 },
-        { ox:  0.06, oy:  0.04, rs: 0.17, r: 255, g: 215, b: 185, a: 0.28 },
-      ]},
-      // Orion-style: deep blue outer → teal middle → bright cyan wisp → ice-white core
-      { fx: 0.82, fy: 0.10, fr: 0.28, layers: [
-        { ox:  0.00, oy:  0.00, rs: 1.00, r:  15, g:  70, b: 210, a: 0.11 },
-        { ox: -0.16, oy:  0.12, rs: 0.58, r:   0, g: 200, b: 175, a: 0.14 },
-        { ox:  0.12, oy:  0.10, rs: 0.40, r:  80, g: 150, b: 255, a: 0.09 },
-        { ox: -0.04, oy: -0.06, rs: 0.15, r: 200, g: 230, b: 255, a: 0.28 },
-      ]},
-      // Eta Carinae-style: crimson outer → orange inner → magenta wisp → gold-white core
-      { fx: 0.88, fy: 0.80, fr: 0.30, layers: [
-        { ox:  0.00, oy:  0.00, rs: 1.00, r: 190, g:  20, b:  50, a: 0.11 },
-        { ox: -0.18, oy: -0.10, rs: 0.62, r: 240, g:  95, b:  20, a: 0.15 },
-        { ox:  0.12, oy:  0.16, rs: 0.44, r: 210, g:  55, b: 130, a: 0.08 },
-        { ox: -0.02, oy:  0.03, rs: 0.17, r: 255, g: 225, b: 145, a: 0.26 },
-      ]},
-      // Helix-style: violet outer → rose middle → blue accent → lavender-white core
-      { fx: 0.15, fy: 0.85, fr: 0.27, layers: [
-        { ox:  0.00, oy:  0.00, rs: 1.00, r: 140, g:  25, b: 230, a: 0.11 },
-        { ox:  0.15, oy: -0.15, rs: 0.55, r: 230, g:  55, b: 165, a: 0.14 },
-        { ox: -0.10, oy:  0.12, rs: 0.42, r:  50, g: 110, b: 250, a: 0.08 },
-        { ox:  0.02, oy: -0.04, rs: 0.16, r: 230, g: 205, b: 255, a: 0.27 },
-      ]},
-    ];
-
-    let W, H, cx, cy, constellations = [];
-    let frame = 0, rot = 0;
-    const t0 = performance.now();
-
-    // Hyperspace state
-    let hsActive = false, hsStart = 0, hsCb = null;
-
-    window.triggerHyperspace = function (cb) {
-      hsActive = true;
-      hsStart  = performance.now();
-      hsCb     = cb || null;
-    };
-
-    function buildConstellations() {
-      constellations = [];
-      const thresh = Math.min(W, H) * 0.20;
-      const connCount = new Array(stars.length).fill(0);
-      for (let i = 0; i < stars.length; i++) {
-        if (connCount[i] >= 2) continue;
-        for (let j = i + 1; j < stars.length; j++) {
-          if (connCount[i] >= 2 || connCount[j] >= 2) continue;
-          const dx = (stars[i].fx - stars[j].fx) * W;
-          const dy = (stars[i].fy - stars[j].fy) * H;
-          if (Math.sqrt(dx * dx + dy * dy) < thresh && Math.random() < 0.35) {
-            constellations.push([i, j]);
-            connCount[i]++; connCount[j]++;
-          }
-        }
-      }
-    }
-
-    function resize() {
-      W = canvas.width  = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-      cx = W / 2; cy = H / 2;
-      buildConstellations();
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    function easeOut(t)  { return 1 - Math.pow(1 - t, 3); }
-    function easeIn2(t)  { return t * t; }
-
-    function drawHyperspace(now) {
-      const e = now - hsStart;
-      if (e >= HS_TOTAL) {
-        hsActive = false;
-        if (hsCb) { hsCb(); hsCb = null; }
-        return;
-      }
-
-      // Pure black background
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, W, H);
-
-      const diag = Math.hypot(W, H);
-
-      if (e < HS_BUILDUP) {
-        // Phase 1: short vector dashes appear and grow
-        const t = easeIn2(e / HS_BUILDUP);
-        const void0 = diag * 0.05;
-
-        ctx.lineCap = 'square';
-        for (const ray of HS_RAYS) {
-          const cos = Math.cos(ray.angle), sin = Math.sin(ray.angle);
-          const head = void0 + diag * t * t * 0.65 * ray.speed;
-          if (head <= void0) continue;
-          ctx.beginPath();
-          ctx.moveTo(cx + cos * void0, cy + sin * void0);
-          ctx.lineTo(cx + cos * head,  cy + sin * head);
-          ctx.strokeStyle = `rgba(255,255,255,${ray.bri * Math.min(1, t * 3.5)})`;
-          ctx.lineWidth = ray.w;
-          ctx.stroke();
-        }
-
-      } else if (e < HS_BUILDUP + HS_JUMP) {
-        // Phase 2: full-length chunky vector streaks + white centre glow
-        const t = (e - HS_BUILDUP) / HS_JUMP;
-
-        // White centre glow (vector-game brightness burst)
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, diag * 0.28);
-        grd.addColorStop(0,    `rgba(255,255,255,${0.12 + t * 0.12})`);
-        grd.addColorStop(0.15, `rgba(255,255,255,${0.04 + t * 0.06})`);
-        grd.addColorStop(0.40, 'transparent');
-        grd.addColorStop(1,    'transparent');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, W, H);
-
-        // Growing void in centre + streaks reaching to edge and beyond
-        const voidR   = diag * 0.05 * (1 + t * 4);
-        const headMul = diag * (0.75 + t * 0.80);
-
-        ctx.lineCap = 'square';
-        for (const ray of HS_RAYS) {
-          const cos = Math.cos(ray.angle), sin = Math.sin(ray.angle);
-          const head = headMul * ray.speed;
-          ctx.beginPath();
-          ctx.moveTo(cx + cos * voidR, cy + sin * voidR);
-          ctx.lineTo(cx + cos * head,  cy + sin * head);
-          ctx.strokeStyle = `rgba(255,255,255,${ray.bri})`;
-          ctx.lineWidth = ray.w * (1 + t * 0.35);
-          ctx.stroke();
-        }
-
-      } else {
-        // Phase 3: white flash dissolving
-        const t = (e - HS_BUILDUP - HS_JUMP) / HS_FLASH;
-        const a = 1 - t;
-        for (const ray of HS_RAYS) {
-          const cos = Math.cos(ray.angle), sin = Math.sin(ray.angle);
-          ctx.beginPath();
-          ctx.moveTo(cx + cos * diag * 0.18, cy + sin * diag * 0.18);
-          ctx.lineTo(cx + cos * diag * 2.2,  cy + sin * diag * 2.2);
-          ctx.strokeStyle = `rgba(255,255,255,${ray.bri * a * 0.85})`;
-          ctx.lineWidth = ray.w * 0.7;
-          ctx.stroke();
-        }
-        ctx.fillStyle = `rgba(255,255,255,${a * 0.90})`;
-        ctx.fillRect(0, 0, W, H);
-      }
-    }
-
-    function draw(now) {
-      rot += ROT_SPEED;
-      frame++;
-
-      if (hsActive) { drawHyperspace(now); requestAnimationFrame(draw); return; }
-
-      ctx.clearRect(0, 0, W, H);
-      const elapsed = now - t0;
-      const warpT   = Math.min(easeOut(elapsed / WARP_MS), 1);
-      const inWarp  = elapsed < WARP_MS;
-
-      if (inWarp) {
-        // Stars streak in from their positions — warp arrival
-        const prevT = Math.max(0, easeOut(Math.max(0, elapsed - 16) / WARP_MS));
-        for (const s of stars) {
-          const nx = s.fx - 0.5, ny = s.fy - 0.5;
-          ctx.beginPath();
-          ctx.moveTo(cx + nx * W * 2 * prevT, cy + ny * H * 2 * prevT);
-          ctx.lineTo(cx + nx * W * 2 * warpT, cy + ny * H * 2 * warpT);
-          ctx.strokeStyle = `rgba(${s.r},${s.g},${s.b},${s.bri * warpT * 0.9})`;
-          ctx.lineWidth = s.size * 0.5;
-          ctx.stroke();
-        }
-      } else {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(rot);
-        ctx.translate(-cx, -cy);
-
-        // Nebulas: multi-layer offset gradients for organic colour zones
-        for (const nb of NEBULAS) {
-          const nx = nb.fx * W, ny = nb.fy * H;
-          const baseR = nb.fr * Math.min(W, H);
-          for (const lyr of nb.layers) {
-            const lx = nx + lyr.ox * baseR;
-            const ly = ny + lyr.oy * baseR;
-            const lr = lyr.rs * baseR;
-            const grd = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-            grd.addColorStop(0,    `rgba(${lyr.r},${lyr.g},${lyr.b},${lyr.a})`);
-            grd.addColorStop(0.45, `rgba(${lyr.r},${lyr.g},${lyr.b},${+(lyr.a * 0.35).toFixed(3)})`);
-            grd.addColorStop(1,    'transparent');
-            ctx.fillStyle = grd;
-            ctx.fillRect(0, 0, W, H);
-          }
-        }
-
-        // Constellation lines: connect nearby star pairs
-        ctx.lineWidth = 0.6;
-        for (const [i, j] of constellations) {
-          const si = stars[i], sj = stars[j];
-          const twA = 0.5 + 0.5 * Math.sin(frame * si.ts + si.to);
-          const twB = 0.5 + 0.5 * Math.sin(frame * sj.ts + sj.to);
-          const alpha = (twA + twB) * 0.5 * 0.10;
-          ctx.beginPath();
-          ctx.moveTo(si.fx * W, si.fy * H);
-          ctx.lineTo(sj.fx * W, sj.fy * H);
-          ctx.strokeStyle = `rgba(180,210,255,${alpha})`;
-          ctx.stroke();
-        }
-
-        // Stars: circles with glow for bright ones
-        for (const s of stars) {
-          const tw = 0.6 + 0.4 * Math.sin(frame * s.ts + s.to);
-          const x = s.fx * W, y = s.fy * H;
-          const alpha = s.bri * tw;
-          if (s.size > 1.8) {
-            ctx.beginPath();
-            ctx.arc(x, y, s.size * 2.8, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${s.r},${s.g},${s.b},${alpha * 0.07})`;
-            ctx.fill();
-          }
-          ctx.beginPath();
-          ctx.arc(x, y, s.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${s.r},${s.g},${s.b},${alpha})`;
-          ctx.fill();
-        }
-
-        ctx.restore();
-      }
-
-      requestAnimationFrame(draw);
-    }
-    requestAnimationFrame(draw);
-  })();
-
-  // ── Boot sequence ──
-  (function () {
-    const BAR    = 24;
-    const BAR_MS = 520;
-
-    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-    async function run() {
-      const overlay = document.getElementById('boot-overlay');
-      const linesEl = document.getElementById('boot-lines');
-      const DRIVERS = parseInt(overlay.dataset.drivers, 10) || 0;
-
-      linesEl.innerHTML = '';
-      overlay.classList.remove('fade-out');
-      overlay.style.display = 'flex';
-      overlay.style.opacity  = '1';
-
-      async function section(title) {
-        await wait(420);
-        const d = document.createElement('div');
-        d.className = 'boot-section'; d.textContent = '[ ' + title + ' ]';
-        linesEl.appendChild(d);
-        await wait(200);
-      }
-
-      async function bar(label, status, cls) {
-        const row = document.createElement('div'); row.className = 'boot-row';
-        const lbl = document.createElement('span');
-        lbl.className = 'boot-label'; lbl.textContent = label;
-        const b = document.createElement('span');
-        b.className = 'boot-bar boot-bar-empty'; b.textContent = '░'.repeat(BAR);
-        row.append(lbl, b); linesEl.appendChild(row);
-        for (let i = 1; i <= BAR; i++) {
-          await wait(BAR_MS / BAR);
-          b.className = 'boot-bar boot-bar-fill';
-          b.textContent = '█'.repeat(i) + '░'.repeat(BAR - i);
-        }
-        const st = document.createElement('span');
-        st.className = 'boot-status-' + cls;
-        st.textContent = '  ' + status;
-        row.appendChild(st);
-        await wait(95);
-      }
-
-      function line(text, cls) {
-        const d = document.createElement('div');
-        d.className = cls || ''; d.textContent = text;
-        linesEl.appendChild(d);
-      }
-
-      await wait(320);
-
-      await section('HARDWARE DIAGNOSTICS');
-      await bar('CPU CORES        ', '8 CORES',       'ok');
-      await bar('SYSTEM MEMORY    ', '16.0 GB',       'ok');
-      await bar('DISPLAY OUTPUT   ', '1920×1080',     'ok');
-      await bar('STORAGE ARRAY    ', 'NOMINAL',       'ok');
-
-      await section('NETWORK LAYER');
-      await bar('LOCAL INTERFACE  ', 'ACTIVE',        'ok');
-      await bar('TORCS HOST LINK  ', 'LOCALHOST',     'ok');
-      await bar('TELEMETRY SOCKET ', 'UDP:9999',      'ok');
-      await bar('SCR PROTOCOL     ', 'v1.3 READY',   'ok');
-
-      await section('AI SUBSYSTEMS');
-      await bar('IBM GRANITE LINK ', 'ESTABLISHED',   'ok');
-      await bar('TELEMETRY ARRAY  ', 'ONLINE',        'ok');
-      await bar('SENSOR CHANNELS  ', '22 ACTIVE',    'ok');
-      await bar('DRIVER REGISTRY  ',
-        DRIVERS + (DRIVERS === 1 ? ' DRIVER' : ' DRIVERS'),
-        DRIVERS > 0 ? 'ok' : 'warn');
-
-      await section('RACE SYSTEMS');
-      await bar('PHYSICS ENGINE   ', 'TORCS 1.3.7',  'ok');
-      await bar('TRACK DATABASE   ', 'CORKSCREW',    'ok');
-      await bar('COLLISION MODEL  ', 'ACTIVE',        'ok');
-      await bar('RACE ORCHESTRATOR', 'READY',         'ok');
-
-      await section('MISSION CONTROL');
-      await bar('LIVE TELEMETRY   ', 'ONLINE',        'ok');
-      await bar('RACE HISTORY     ', 'RESTORED',      'ok');
-      await bar('PROFILE MANAGER  ', 'LOADED',        'ok');
-      await bar('COMMAND INTERFACE', 'ONLINE',        'ok');
-
-      await wait(450);
-      line('ALL SYSTEMS NOMINAL', 'boot-final');
-      await wait(600);
-      line('INITIATING MISSION CONTROL...', 'boot-init');
-      await wait(900);
-
-      // Pre-hide UI so there's no flash between overlay lifting and hyperspace
-      document.body.classList.add('warp-active');
-      overlay.classList.add('fade-out');
-      await wait(750);
-      overlay.style.display = 'none';
-
-      // Hyperspace plays on the canvas, UI hidden until it completes
-      if (typeof window.triggerHyperspace === 'function') {
-        await new Promise(resolve => window.triggerHyperspace(resolve));
-      }
-      document.body.classList.remove('warp-active');
-    }
-
-    if (!sessionStorage.getItem('wc-booted')) {
-      sessionStorage.setItem('wc-booted', '1');
-      run();
-    } else {
-      document.getElementById('boot-overlay').style.display = 'none';
-    }
-
-    window.replayBoot = run;
-  })();
-
+  // Tiny inline handler - kicks off the hyperspace effect, then submits the launch form
   function launchWithHyperspace() {
     const form = document.getElementById('launch-form');
     if (!form) return;
@@ -1250,14 +292,5 @@
     });
   }
 </script>
-
-
-<footer class="pfk-strip">
-  <span><span class="pfk">PF1</span>HELP</span>
-  <span><span class="pfk" onclick="replayBoot()">PF3</span>BOOT LOG</span>
-  <span><span class="pfk" onclick="launchWithHyperspace()">PF5</span>LAUNCH RACE</span>
-  <span><span class="pfk" onclick="fetch('/stop',{method:'POST'}).then(()=>location.reload())">PF12</span>ABORT RACE</span>
-  <span class="pfk-coord">ROW:01 COL:01 &nbsp; IBM WARP-CORE TERMINAL</span>
-</footer>
 </body>
 </html>

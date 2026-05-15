@@ -1,0 +1,105 @@
+/* Top terminal ID bar, page header, and section heading style. */
+
+.terminal-id-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(15,98,254,0.07);
+  border-bottom: 1px solid rgba(15,98,254,0.22);
+  padding: 4px 28px;
+  font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--muted);
+  margin: -28px -28px 28px;
+}
+.tid-right { display: flex; gap: 20px; }
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 44px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.header-title {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(255,255,255,0.2), 0 0 80px rgba(255,255,255,0.08);
+}
+.header-sub {
+  font-size: 9px;
+  font-weight: 300;
+  letter-spacing: 0.32em;
+  color: var(--muted);
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+.header-sys {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--green);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+.header-sys::before { content: '> '; color: rgba(255,255,255,0.4); }
+.header-ibm {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-ibm-logo {
+  display: flex;
+  align-items: center;
+}
+.header-ibm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ibm-label {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: #0f62fe;
+  line-height: 1;
+}
+.ibm-powered {
+  font-size: 8px;
+  letter-spacing: 0.24em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.btn-boot-replay {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 0;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  align-self: flex-end;
+}
+.btn-boot-replay:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+
+section { margin-bottom: 44px; }
+
+/* Section heading style - "══" prefix and trailing rule line for that mainframe feel */
+h2 {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 20px;
+  padding: 0;
+  border: none;
+  white-space: nowrap;
+}
+h2::before { content: '══ '; color: rgba(255,255,255,0.4); letter-spacing: 0; }
+h2::after  { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.15); margin-left: 10px; }

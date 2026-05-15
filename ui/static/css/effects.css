@@ -1,0 +1,42 @@
+/* Boot overlay and warp-active fade-out used during the hyperspace animation. */
+
+/* During hyperspace we hide the rest of the UI so only the canvas shows through */
+.terminal-id-bar, header.site-header, section, footer.pfk-strip {
+  transition: opacity 0.5s ease;
+}
+body.warp-active .terminal-id-bar,
+body.warp-active header.site-header,
+body.warp-active section,
+body.warp-active footer.pfk-strip {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Full-screen boot overlay shown on first load and via PF3 / Boot Log button.
+   On subsequent loads in the same session, the inline script in <head> adds
+   `booted` to <html> which hides this before paint - avoids a flash. */
+#boot-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.7s ease;
+}
+html.booted #boot-overlay { display: none; }
+#boot-overlay.fade-out { opacity: 0; pointer-events: none; }
+#boot-box { width: min(620px, 90vw); font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+#boot-ibm-logo { filter: drop-shadow(0 0 10px rgba(15,98,254,0.6)); }
+.boot-title { font-size: 20px; font-weight: 600; color: #fff; letter-spacing: 0.12em; margin: 14px 0 4px; }
+.boot-sub   { font-size: 9px; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; }
+.boot-sep   { border-top: 1px solid rgba(15,98,254,0.25); margin: 14px 0 10px; }
+.boot-section { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.boot-row   { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; line-height: 1.6; }
+.boot-label { color: var(--cyan); width: 210px; flex-shrink: 0; letter-spacing: 0.05em; }
+.boot-bar   { letter-spacing: -1px; font-size: 12px; }
+.boot-bar-empty { color: #1a2232; }
+.boot-bar-fill  { color: var(--blue); }
+.boot-status-ok   { color: var(--green); font-weight: 600; margin-left: 6px; }
+.boot-status-warn { color: var(--gold);  font-weight: 600; margin-left: 6px; }
+.boot-final { color: var(--green); font-weight: 600; letter-spacing: 0.08em; margin-top: 14px; }
+.boot-init  { color: var(--text); margin-top: 6px; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+#boot-cursor { color: var(--text); display: inline-block; animation: blink 0.7s step-end infinite; }

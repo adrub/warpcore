@@ -1,0 +1,54 @@
+/* Theme variables, base reset, background canvas and scanline overlay. */
+
+:root {
+  --bg:       #000000;
+  --bg-card:  #030303;
+  --bg-input: #060606;
+  --blue:     #0f62fe;
+  --cyan:     #d0d0d0;
+  --text:     #d0d0d0;
+  --muted:    rgba(255,255,255,0.28);
+  --green:    #3ddc67;
+  --red:      #ff3d4d;
+  --gold:     #ffd060;
+  --border:   rgba(255,255,255,0.1);
+  --glow:     rgba(255,255,255,0.04);
+  --amber:     #d0d0d0;
+  --amber-dim: rgba(255,255,255,0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  min-height: 100vh;
+  padding: 28px 28px 60px;
+  overflow-x: hidden;
+}
+
+/* Full-window canvas sitting behind everything else - stars + nebulas paint here */
+#space-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* CRT scanline overlay - thin dark stripes for the retro terminal feel */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 3px,
+    rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+  );
+}
