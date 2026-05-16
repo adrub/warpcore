@@ -8,7 +8,7 @@ from server.config import (
     MAX_CARS, MQTT_BROKER, MQTT_PORT,
 )
 from server.params import expand_simple_params
-from server.persistence import (
+from server.history import (
     load_config, save_config,
     load_profiles, save_profiles,
     load_history,
