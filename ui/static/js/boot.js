@@ -62,27 +62,12 @@
     await bar('CPU CORES        ', '8 CORES',       'ok');
     await bar('SYSTEM MEMORY    ', '16.0 GB',       'ok');
     await bar('DISPLAY OUTPUT   ', '1920×1080',     'ok');
-    await bar('STORAGE ARRAY    ', 'NOMINAL',       'ok');
 
     await section('NETWORK LAYER');
     await bar('LOCAL INTERFACE  ', 'ACTIVE',        'ok');
-    await bar('TORCS HOST LINK  ', 'LOCALHOST',     'ok');
-    await bar('TELEMETRY SOCKET ', 'UDP:9999',      'ok');
-    await bar('SCR PROTOCOL     ', 'v1.3 READY',   'ok');
-
-    await section('AI SUBSYSTEMS');
-    await bar('IBM GRANITE LINK ', 'ESTABLISHED',   'ok');
-    await bar('TELEMETRY ARRAY  ', 'ONLINE',        'ok');
-    await bar('SENSOR CHANNELS  ', '22 ACTIVE',    'ok');
     await bar('DRIVER REGISTRY  ',
       DRIVERS + (DRIVERS === 1 ? ' DRIVER' : ' DRIVERS'),
       DRIVERS > 0 ? 'ok' : 'warn');
-
-    await section('RACE SYSTEMS');
-    await bar('PHYSICS ENGINE   ', 'TORCS 1.3.7',  'ok');
-    await bar('TRACK DATABASE   ', 'CORKSCREW',    'ok');
-    await bar('COLLISION MODEL  ', 'ACTIVE',        'ok');
-    await bar('RACE ORCHESTRATOR', 'READY',         'ok');
 
     await section('MISSION CONTROL');
     await bar('LIVE TELEMETRY   ', 'ONLINE',        'ok');
