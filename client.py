@@ -1,7 +1,8 @@
 # Web Server and UI for Python Race Orchestrator
 
 import threading
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from functools import wraps
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from server import state
 from server.config import (
     DRIVER_PARAMS, SIMPLE_PARAMS, DEFAULT_SIMPLE, DRIVER_DISPLAY,
@@ -21,6 +22,30 @@ from server import mqtt_bridge as _mqtt
 
 # Handles what folder to look in for UI files
 app = Flask(__name__, template_folder='ui', static_folder='ui/static')
+app.secret_key = 'warpcore-mission-control'
+
+# Redirect to login if not authenticated - exempts login page and static assets
+@app.before_request
+def require_login():
+    if request.endpoint not in ('login', 'logout', 'static') and not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+# Login page - accepts admin/password
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form.get('username') == 'admin' and request.form.get('password') == 'password':
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        error = 'ACCESS DENIED — INVALID CREDENTIALS'
+    return render_template('login.html', error=error)
+
+# Clears session and returns to login
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 # Launches main page and assigns ports for cars in config json
 @app.route("/")
