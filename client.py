@@ -198,5 +198,5 @@ if __name__ == "__main__":
     import logging
 
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
-    print("UI running at http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    print("UI running at http://localhost:3000")
+    app.run(host="0.0.0.0", port=3000, debug=False)

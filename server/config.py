@@ -11,7 +11,7 @@ TELEMETRY_PORT = 9999
 MAX_CARS       = 10
 
 # MQTT config
-MQTT_BROKER = "localhost" # <--- change to IP of PI
+MQTT_BROKER = "172.20.10.3" # <--- change to IP of PI
 MQTT_PORT   = 1883
 
 # Driver Information - maps driver type to file and displays name
