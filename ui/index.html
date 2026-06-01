@@ -89,7 +89,7 @@
     </div>
     <div class="header-ibm-text">
       <div class="ibm-label">IBM</div>
-      <div class="ibm-powered">To Dare Is To Do</div>
+      <div class="ibm-powered">THINK</div>
     </div>
     <button class="btn-boot-replay" onclick="replayBoot()">⟳ Boot Log</button>
   </div>
@@ -120,6 +120,7 @@
         <div class="name-row">
           <label>Name</label>
           <input type="text" name="name" value="{{ car.name }}">
+          <input type="color" name="color" value="{{ car.get('color', '#ff0000') }}" title="Car colour in TORCS" style="width:36px;height:32px;padding:2px;cursor:pointer;border:1px solid var(--border);background:var(--surface)">
         </div>
 
         {% for section_name, sliders in simple_params[ctype].items() %}
