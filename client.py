@@ -1,5 +1,6 @@
 # Web Server and UI for Python Race Orchestrator
 
+import os
 import threading
 from functools import wraps
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
@@ -22,7 +23,7 @@ from server import mqtt_bridge as _mqtt
 
 # Handles what folder to look in for UI files
 app = Flask(__name__, template_folder='ui', static_folder='ui/static')
-app.secret_key = 'warpcore-mission-control'
+app.secret_key = os.urandom(24)  # Random each restart — forces login on every server start
 
 # Redirect to login if not authenticated - exempts login page and static assets
 @app.before_request
@@ -71,7 +72,9 @@ def add():
     name = request.form.get("name", "").strip() or DRIVER_DISPLAY.get(driver_type, driver_type)
     simple = dict(DEFAULT_SIMPLE.get(driver_type, {}))
     params = expand_simple_params(driver_type, simple)
-    state.race_config.append({"name": name, "type": driver_type, "params": params, "simple": simple})
+    _PALETTE = ['#ff0000','#0000ff','#00cc00','#ffcc00','#cc00cc','#00cccc','#ff6600','#ffffff','#ff69b4','#888888']
+    color = _PALETTE[len(state.race_config) % len(_PALETTE)]
+    state.race_config.append({"name": name, "type": driver_type, "params": params, "simple": simple, "color": color})
     assign_ports()
     save_config()
     return redirect(url_for("index"))
@@ -94,6 +97,9 @@ def update(idx):
     new_name = request.form.get("name", "").strip()
     if new_name:
         car["name"] = new_name
+    new_color = request.form.get("color", "").strip()
+    if new_color:
+        car["color"] = new_color
 
     # Switch between simple parameter adjustment and more advanced parameter adjustment
     mode = request.form.get("mode", "simple")
