@@ -1,11 +1,17 @@
 #TORCS control and automation functions
 
+import os
+import shutil
 import subprocess
 import time
 import xml.etree.ElementTree as ET
 
 from . import state
 from .config import QUICKRACE_XML
+
+SCR_SERVER_XML_SRC = "/usr/local/share/games/torcs/drivers/scr_server/scr_server.xml"
+SCR_SERVER_XML_DST = os.path.expanduser("~/.torcs/drivers/scr_server/scr_server.xml")
+TORCS_CARS_DIR     = "/usr/local/share/games/torcs/cars"
 
 # Assigns sequential UDP ports starting at 3001 to each car in the race config
 def assign_ports():
@@ -85,3 +91,80 @@ def autostart_torcs():
         _xdotool("key", "--window", wid, key)
         time.sleep(delay)
     print("[autostart] Race started.")
+
+
+# Creates a per-slot car model directory with a recoloured texture derived from car1-ow1
+def _make_slot_car(slot_idx, hex_color):
+    from PIL import Image
+    car_name = f"warpcore-c{slot_idx}"
+    slot_dir = os.path.join(TORCS_CARS_DIR, car_name)
+    os.makedirs(slot_dir, exist_ok=True)
+    src_dir = os.path.join(TORCS_CARS_DIR, "car1-ow1")
+
+    hx = hex_color.lstrip("#")
+    tr, tg, tb = int(hx[0:2], 16), int(hx[2:4], 16), int(hx[4:6], 16)
+    mx = max(tr, tg, tb, 1)
+
+    # Remap the car body: source R channel drives intensity, target colour sets hue
+    img = Image.open(os.path.join(src_dir, "car1-ow1.rgb")).convert("RGBA")
+    r, g, b, a = img.split()
+    new_r = r.point(lambda x: x * tr // mx)
+    new_g = r.point(lambda x: x * tg // mx)
+    new_b = r.point(lambda x: x * tb // mx)
+    Image.merge("RGBA", (new_r, new_g, new_b, a)).save(
+        os.path.join(slot_dir, f"{car_name}.rgb"), format="SGI"
+    )
+
+    # Copy static assets that don't need recolouring
+    for fname in ("shadow.rgb", "tex-wheel.rgb"):
+        shutil.copy2(os.path.join(src_dir, fname), os.path.join(slot_dir, fname))
+
+    # Patch .acc to reference the new texture name
+    with open(os.path.join(src_dir, "car1-ow1.acc")) as f:
+        acc = f.read()
+    with open(os.path.join(slot_dir, f"{car_name}.acc"), "w") as f:
+        f.write(acc.replace("car1-ow1.rgb", f"{car_name}.rgb"))
+
+    # Patch car XML: rename params block and .acc reference
+    with open(os.path.join(src_dir, "car1-ow1.xml")) as f:
+        xml = f.read()
+    xml = xml.replace('name="car1-ow1" type=', f'name="{car_name}" type=')
+    xml = xml.replace('"car1-ow1.acc"', f'"{car_name}.acc"')
+    with open(os.path.join(slot_dir, f"{car_name}.xml"), "w") as f:
+        f.write(xml)
+
+    return car_name
+
+
+# Generates per-slot coloured car models and writes a patched scr_server.xml
+def patch_car_colors(race_config):
+    try:
+        from PIL import Image  # noqa: F401
+    except ImportError:
+        print("[colors] Pillow not installed — run: pip install Pillow")
+        return
+
+    tree = ET.parse(SCR_SERVER_XML_SRC)
+    root = tree.getroot()
+    for robots in root.findall("section[@name='Robots']"):
+        for index in robots.findall("section[@name='index']"):
+            for slot in index.findall("section"):
+                idx = int(slot.get("name", -1))
+                if 0 <= idx < len(race_config):
+                    hex_color = race_config[idx].get("color", "#ff0000")
+                    car_name  = _make_slot_car(idx, hex_color)
+                    for attr in slot.findall("attstr"):
+                        if attr.get("name") == "car name":
+                            attr.set("val", car_name)
+                    hx = hex_color.lstrip("#")
+                    rf = int(hx[0:2], 16) / 255.0
+                    gf = int(hx[2:4], 16) / 255.0
+                    bf = int(hx[4:6], 16) / 255.0
+                    for attr in slot.findall("attnum"):
+                        if attr.get("name") == "red":   attr.set("val", f"{rf:.4f}")
+                        if attr.get("name") == "green": attr.set("val", f"{gf:.4f}")
+                        if attr.get("name") == "blue":  attr.set("val", f"{bf:.4f}")
+
+    os.makedirs(os.path.dirname(SCR_SERVER_XML_DST), exist_ok=True)
+    ET.indent(tree, space="  ")
+    tree.write(SCR_SERVER_XML_DST, xml_declaration=True, encoding="UTF-8")

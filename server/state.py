@@ -15,7 +15,7 @@ telemetry = {}
 race_history = []
 
 # Named profiles keyed by driver type then profile name
-profiles = {"pid_ai": {}, "simple_ai": {}}
+profiles = {"pid_ai": {}, "simple_ai": {}, "stanley_ai": {}}
 
 # Lock protecting telemetry/race_history reads/writes between the UDP thread and routes
 lock = threading.Lock()

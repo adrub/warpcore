@@ -9,7 +9,7 @@ import time
 
 from . import state
 from .config import DRIVER_FILES, TELEMETRY_PORT
-from .torcs_control import assign_ports, patch_quickrace_xml, autostart_torcs, quit_torcs
+from .torcs_control import assign_ports, patch_quickrace_xml, autostart_torcs, quit_torcs, patch_car_colors
 
 # Sends race state updates to the PI so it can trigger LED effects at the right time
 def publish_race_states():
@@ -27,16 +27,21 @@ def do_launch():
         return False
     assign_ports()
     patch_quickrace_xml(len(state.race_config))
+    patch_car_colors(state.race_config)
 
     # First entry in procs is always TORCS itself
     state.procs.append(subprocess.Popen(["torcs"]))
     threading.Thread(target=autostart_torcs, daemon=True).start()
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    for car in state.race_config:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    n_cars = len(state.race_config)
+    for i, car in enumerate(state.race_config):
         # Drivers learn where to send telemetry via this --params extra field
         params = dict(car["params"])
         params["telemetry_port"] = TELEMETRY_PORT
+        # Spread each car's preferred line across the track width (evenly by field size) so they
+        # don't all stack on the identical apex line - reduces same-line collisions in traffic.
+        params["lane_bias"] = (-0.5 + 1.0 * i / (n_cars - 1)) if n_cars > 1 else 0.0
         cmd = [
             sys.executable, "-u",
             os.path.join(base_dir, DRIVER_FILES[car["type"]]),

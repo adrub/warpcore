@@ -24,7 +24,7 @@ def expand_simple_params(driver_type, simple):
         "brake_emergency_speed": linear_interpolate(30,  70,  bf),
         "brake_hard_speed":      linear_interpolate(40,  100, bf),
         "brake_early_speed":     linear_interpolate(60,  140, bf),
-        "brake_soft_speed":      linear_interpolate(30,  65,  bf),
+        "brake_soft_speed":      linear_interpolate(50,  90,  bf),
         # Braking ranges - the look-ahead distance (m) that triggers each tier
         "brake_emergency_range": linear_interpolate(15,  40,  bd),
         "brake_early_range":     linear_interpolate(50,  150, bd),
@@ -41,6 +41,11 @@ def expand_simple_params(driver_type, simple):
         "opp_brake_dist":      linear_interpolate(15,  4,    oa),       # more aggressive = brake closer
         "opp_slow_dist":       linear_interpolate(10,  35,   od),
         "opp_clear_dist":      linear_interpolate(15,  50,   od),
+        # Dynamics
+        # Racing line: 1.0 = always hug the inside (apex), 0.0 = hug the outside, 0.5 = centre.
+        # Passed straight through (the slider already spans 0..1).
+        "apex_aggressiveness": simple.get("apex_aggressiveness", 0.6),
+        "tc_slip":             linear_interpolate(1.1, 2.5,  simple.get("tc_slip", 0.4)),
     }
 
     if driver_type == "pid_ai":
@@ -48,7 +53,6 @@ def expand_simple_params(driver_type, simple):
         raw["steer_kp"] = simple.get("steer_kp", 0.3)
         raw["steer_ki"] = simple.get("steer_ki", 0.0)
         raw["steer_kd"] = simple.get("steer_kd", 0.5)
-        raw["centered_threshold"] = 0.5
     elif driver_type == "simple_ai":
         sr = simple.get("steering_responsiveness", 0.5)
         raw["angle_gain"]    = linear_interpolate(0.2, 1.0, sr)
