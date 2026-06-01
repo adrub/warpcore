@@ -45,29 +45,68 @@ def build_command(accel, brake, steer, gear):
 def opponent_action(sensors, params, state):
     opp = sensors.get("opponents", [200.0] * 36)
 
-    fwd_dist   = min(opp[16:21])
-    left_gap   = min(opp[9:17])
-    right_gap  = min(opp[19:27])
-    left_side  = min(opp[13:17])
-    right_side = min(opp[19:23])
+    # Sensor windows are mirrored about dead-ahead (index 18) so avoidance behaves identically
+    # whichever side a car is on. The side windows span the whole flank - front quarter through
+    # alongside to the rear quarter - so a car gives room to an overtaker beside OR behind it,
+    # not just one that's already drawn level at the front.
+    fwd_dist   = min(opp[16:21])   # car directly ahead       (-20..+20 deg)
+    left_gap   = min(opp[10:18])   # room to the left         (-80..-10 deg) for choosing a side
+    right_gap  = min(opp[19:27])   # room to the right        (+10..+80 deg)
+    left_side  = min(opp[8:18])    # car along the left flank (-100..-10 deg) incl. rear quarter
+    right_side = min(opp[19:29])   # car along the right flank (+10..+100 deg)
 
     brake_dist      = params.get("opp_brake_dist", 8)
     slow_dist       = params.get("opp_slow_dist", 20)
     clear_dist      = params.get("opp_clear_dist", 30)
     overtake_offset = params.get("opp_overtake_offset", 0.4)
+    side_dist       = params.get("opp_side_dist", 10)
 
+    speed = sensors.get("speedX", 0)
+
+    # Longitudinal response to a car directly ahead:
+    #  - imminent (< brake_dist): hard brake, no throttle
+    #  - closing (< slow_dist): ease the throttle to match its pace AND brake progressively if we
+    #    are carrying speed, so a fast car never coasts into the back of a slower one. The brake is
+    #    gated above 40 km/h so grid cars at the start ease rather than brake (no stall).
+    #  - clear: full throttle
     if fwd_dist < brake_dist:
         extra_brake = 0.6
+        throttle_scale = 0.0
     elif fwd_dist < slow_dist:
-        extra_brake = 0.3 * (1 - (fwd_dist - brake_dist) / (slow_dist - brake_dist))
+        frac = (slow_dist - fwd_dist) / max(slow_dist - brake_dist, 1)   # 0 far -> 1 close
+        throttle_scale = max(0.3, 1.0 - frac)
+        extra_brake = min(0.6, frac * 0.6) if speed > 40 else 0.0
     else:
-        extra_brake = 0
+        extra_brake = 0.0
+        throttle_scale = 1.0
+
+    # HIGHEST PRIORITY, active even at a standstill: if a car is alongside, steer away from it.
+    # Checked before the overtake logic so two cars can never converge into each other - on the
+    # grid at the start or contesting a line mid-race.
+    # Boxed in on both flanks: don't steer into either - hold the line and ease back to let it clear.
+    if left_side < side_dist and right_side < side_dist:
+        return 0.0, max(extra_brake, 0.3), throttle_scale
+    if left_side < side_dist and left_side <= right_side:
+        return overtake_offset, extra_brake, throttle_scale     # car on the left -> move right
+    if right_side < side_dist and right_side < left_side:
+        return -overtake_offset, extra_brake, throttle_scale    # car on the right -> move left
 
     side = state["side"]
 
     if side is None:
         if fwd_dist < slow_dist:
-            side = "left" if left_gap > right_gap else "right"
+            # Prefer diving to the INSIDE of the corner (the classic out-braking overtake) when
+            # that side is clear of cars; only fall back to the side with more room (the outside)
+            # on straights or when the inside is blocked. Inside is the side the track curves
+            # toward, from the same sensor imbalance the apex line uses.
+            track     = sensors.get("track", [100] * 19)
+            imbalance = sum(track[10:19]) / 9 - sum(track[0:9]) / 9   # >0 = curves left
+            if abs(imbalance) > 10:  # in a corner
+                inside     = "left" if imbalance > 0 else "right"
+                inside_gap = left_gap if inside == "left" else right_gap
+                side = inside if inside_gap > slow_dist else ("left" if left_gap > right_gap else "right")
+            else:
+                side = "left" if left_gap > right_gap else "right"
             state["side"] = side
     else:
         alongside = right_side < 15 if side == "left" else left_side < 15
@@ -82,7 +121,7 @@ def opponent_action(sensors, params, state):
     else:
         target_offset = 0.0
 
-    return target_offset, extra_brake
+    return target_offset, extra_brake, throttle_scale
 
 
 class Driver:
@@ -97,6 +136,8 @@ class Driver:
         self._tel_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._tel_tick = 0
         self._opp_state = {"side": None}
+        # Previous throttle output, used to smoothly ramp acceleration between ticks
+        self.prev_accel = 0.0
 
     def connect(self):
         print(f"[{self.name}] Connecting to TORCS at {self.host}:{self.port} ...")
