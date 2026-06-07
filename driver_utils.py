@@ -31,8 +31,9 @@ def abs_brake(brake, sensors):
     if not wheel_spin:
         return brake
     expected_spin = (speed / 3.6) / _WHEEL_RADIUS
-    avg_spin = sum(wheel_spin) / len(wheel_spin)
-    if avg_spin < 0.3 * expected_spin:
+    # Watch the SLOWEST wheel - a single locked wheel signals lockup even while the others spin
+    min_spin = min(wheel_spin)
+    if min_spin < 0.3 * expected_spin:
         return brake * 0.5
     return brake
 
@@ -40,13 +41,16 @@ def abs_brake(brake, sensors):
 def traction_control(accel, sensors, tc_slip):
     wheel_spin = sensors.get("wheelSpinVel", [])
     speed = sensors.get("speedX", 0)
-    if not wheel_spin or speed < 5 or accel == 0:
+    if not wheel_spin or accel == 0:
         return accel
-    expected_spin = (speed / 3.6) / _WHEEL_RADIUS
+    # Clamp the reference speed to 5 km/h so TC still acts from a standstill - the old `speed < 5`
+    # skip was a blind spot exactly where launch wheelspin is worst.
+    calc_speed = max(5.0, speed)
+    expected_spin = (calc_speed / 3.6) / _WHEEL_RADIUS
     avg_spin = sum(wheel_spin) / len(wheel_spin)
-    slip = avg_spin / max(expected_spin, 0.1)
+    slip = avg_spin / expected_spin
     if slip > tc_slip:
-        return max(0.0, accel - (slip - tc_slip) * 0.3)
+        return max(0.0, accel - (slip - tc_slip) * 0.4)
     return accel
 
 # Computes the target racing-line position across the track for the current corner.
@@ -61,7 +65,7 @@ def racing_line_offset(sensors, aggressiveness, bias=0.0):
     right_avg = sum(track[10:19]) / 9
     imbalance = right_avg - left_avg              # >0 => track opens right => corner curves left
     sharpness = min(1.0, abs(imbalance) / 50.0)   # 0 on a straight -> 1 in a sharp corner
-    inside_sign = -1.0 if imbalance > 0 else 1.0  # offset sign toward the inside of the corner
+    inside_sign = 1.0 if imbalance > 0 else -1.0  # offset sign toward the inside of the corner (+offset = left)
     # aggressiveness 1 -> inside, 0 -> outside, 0.5 -> centre
     line = inside_sign * (2.0 * aggressiveness - 1.0)
     # Fade the per-car lane bias out in tight corners (little room ahead) so cars converge back
@@ -73,7 +77,10 @@ def racing_line_offset(sensors, aggressiveness, bias=0.0):
 
 # Locks gear 1 and applies full throttle for the first 2 seconds of each race start
 def launch_control(sensors, accel, gear):
-    if sensors.get("curLapTime", 999) < 2.0 and sensors.get("speedX", 0) < 40:
+    # Only fire at the actual race start: no lap completed yet (lastLapTime <= 0) and we've barely
+    # moved. Otherwise curLapTime resetting each lap could re-trigger launch mid-race.
+    is_race_start = sensors.get("lastLapTime", 0) <= 0 and sensors.get("distRaced", 0) < 100.0
+    if is_race_start and sensors.get("curLapTime", 999) < 2.0 and sensors.get("speedX", 0) < 40:
         return 1.0, 1
     return accel, gear
 

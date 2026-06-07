@@ -30,11 +30,17 @@ def parse_sensors(raw):
     for key in single_keys:
         val = _extract(raw, key)
         if val is not None:
-            sensors[key] = float(val)
+            try:
+                sensors[key] = float(val)
+            except ValueError:
+                pass   # skip a malformed field; callers use sensors.get(key, default)
     for key in multi_keys:
         val = _extract(raw, key)
         if val is not None:
-            sensors[key] = [float(v) for v in val.split()]
+            try:
+                sensors[key] = [float(v) for v in val.split()]
+            except ValueError:
+                pass   # skip rather than store [] (which would IndexError downstream)
     return sensors
 
 
@@ -73,9 +79,9 @@ def opponent_action(sensors, params, state):
         extra_brake = 0.6
         throttle_scale = 0.0
     elif fwd_dist < slow_dist:
-        frac = (slow_dist - fwd_dist) / max(slow_dist - brake_dist, 1)   # 0 far -> 1 close
-        throttle_scale = max(0.3, 1.0 - frac)
-        extra_brake = min(0.6, frac * 0.6) if speed > 40 else 0.0
+        frac = (slow_dist - fwd_dist) / max(slow_dist - brake_dist, 1)
+        throttle_scale = max(0.7, 1.0 - 0.3 * frac)
+        extra_brake = min(0.4, frac * 0.4) if (speed > 40 and fwd_dist < brake_dist * 2) else 0.0
     else:
         extra_brake = 0.0
         throttle_scale = 1.0
@@ -87,9 +93,9 @@ def opponent_action(sensors, params, state):
     if left_side < side_dist and right_side < side_dist:
         return 0.0, max(extra_brake, 0.3), throttle_scale
     if left_side < side_dist and left_side <= right_side:
-        return overtake_offset, extra_brake, throttle_scale     # car on the left -> move right
+        return -overtake_offset, extra_brake, throttle_scale     # car on the left -> move right
     if right_side < side_dist and right_side < left_side:
-        return -overtake_offset, extra_brake, throttle_scale    # car on the right -> move left
+        return overtake_offset, extra_brake, throttle_scale    # car on the right -> move left
 
     side = state["side"]
 
@@ -115,11 +121,14 @@ def opponent_action(sensors, params, state):
             side = None
 
     if side == "left":
-        target_offset = -overtake_offset
-    elif side == "right":
         target_offset = overtake_offset
+    elif side == "right":
+        target_offset = -overtake_offset
     else:
-        target_offset = 0.0
+        # None = no opponent influence; the caller falls back to the racing line. (A real 0.0
+        # returned earlier means "boxed in, hold centre" and must NOT be overridden - hence the
+        # None-vs-0.0 distinction. Callers check `if target_offset is None`.)
+        target_offset = None
 
     return target_offset, extra_brake, throttle_scale
 

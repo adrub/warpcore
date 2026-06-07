@@ -46,12 +46,15 @@ class SimpleAI(Driver):
         # instead of darting sideways across the track toward their assigned lane.
         apex_aggr = self.params.get("apex_aggressiveness", 0.6)
         lane_bias = self.params.get("lane_bias", 0.0) * min(1.0, sensors.get("distRaced", 0) / 200.0)
-        if target_offset == 0:
+        if target_offset is None:
             target_offset = racing_line_offset(sensors, apex_aggr, lane_bias)
-        steer = max(-1.0, min(1.0,
-            angle * angle_gain * corner_factor
-            - (track_pos - target_offset) * position_gain * corner_factor
-        ))
+        steer = (angle * angle_gain * corner_factor
+                 - (track_pos - target_offset) * position_gain * corner_factor)
+        # Dampen steering as speed rises to stop high-speed darting (no effect below ~54 km/h)
+        speed_ms = speed / 3.6
+        if speed_ms > 15.0:
+            steer /= (1.0 + (speed_ms - 15.0) * 0.02)
+        steer = max(-1.0, min(1.0, steer))
 
         # Gear shifting logic
         gear = gearbox(rpm, gear, upshift_threshold, downshift_rpm)
@@ -93,8 +96,8 @@ class SimpleAI(Driver):
         # ABS - pulse brake pressure on wheel lockup
         brake = abs_brake(brake, sensors)
 
-        # Don't accelerate and brake on the same tick
-        if brake > 0:
+        # Don't accelerate and brake on the same tick (ignore a negligible brake)
+        if brake > 0.05:
             accel = 0.0
 
         return accel, brake, steer, gear

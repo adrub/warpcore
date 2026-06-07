@@ -34,7 +34,7 @@ class StanleyAI(Driver):
         # instead of darting sideways across the track toward their assigned lane.
         apex_aggr = self.params.get("apex_aggressiveness", 0.6)
         lane_bias = self.params.get("lane_bias", 0.0) * min(1.0, sensors.get("distRaced", 0) / 200.0)
-        if target_offset == 0:
+        if target_offset is None:
             target_offset = racing_line_offset(sensors, apex_aggr, lane_bias)
 
         # Convert the normalised cross-track error to real metres so the Stanley gain is
