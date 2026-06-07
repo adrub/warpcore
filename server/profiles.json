@@ -1,0 +1,44 @@
+{
+  "pid_ai": {},
+  "simple_ai": {
+    "GoodSimple": {
+      "steering_responsiveness": 0.85,
+      "brake_force": 0.9,
+      "brake_distance": 0.6,
+      "shift_aggression": 0.5,
+      "straight_speed": 1.0,
+      "corner_caution": 0.5,
+      "opp_aggressiveness": 0.5,
+      "opp_detection": 0.6,
+      "apex_aggressiveness": 1.0,
+      "tc_slip": 0.4
+    },
+    "GoodSimpleV2": {
+      "steering_responsiveness": 0.85,
+      "brake_force": 0.9,
+      "brake_distance": 0.6,
+      "shift_aggression": 0.5,
+      "straight_speed": 1.0,
+      "corner_caution": 0.5,
+      "opp_aggressiveness": 0.5,
+      "opp_detection": 0.6,
+      "apex_aggressiveness": 0.0,
+      "tc_slip": 0.4
+    }
+  },
+  "stanley_ai": {
+    "GoodStan": {
+      "stanley_k": 1.0,
+      "stanley_ks": 1.0,
+      "brake_force": 0.8,
+      "brake_distance": 0.8,
+      "shift_aggression": 0.5,
+      "straight_speed": 1.0,
+      "corner_caution": 0.5,
+      "opp_aggressiveness": 1.0,
+      "opp_detection": 0.6,
+      "apex_aggressiveness": 1.0,
+      "tc_slip": 0.4
+    }
+  }
+}

@@ -9,6 +9,7 @@ HISTORY_FILE   = os.path.join(os.path.dirname(__file__), "race_history.json")
 QUICKRACE_XML  = os.path.expanduser("~/.torcs/config/raceman/quickrace.xml")
 TELEMETRY_PORT = 9999
 MAX_CARS       = 10
+RACE_LAPS      = 1     # race length; the finish monitor watches for a car reaching this lap count
 
 # MQTT config
 MQTT_BROKER = "localhost" # <--- change to IP of PI
@@ -16,7 +17,8 @@ MQTT_PORT   = 1883
 
 # Driver Information - maps driver type to file and displays name
 DRIVER_FILES   = {"simple_ai": "simple_ai.py", "pid_ai": "pid_ai.py", "stanley_ai": "stanley_ai.py"}
-DRIVER_DISPLAY = {"simple_ai": "SimpleAI",     "pid_ai": "PidAI",    "stanley_ai": "StanleyAI"}
+DRIVER_DISPLAY = {"simple_ai": "SimpleAI",     "pid_ai": "PidAI",    "stanley_ai": "StanleyAI",
+                  "remote": "Remote (Pi)"}   # a driver hosted on the Pi - reserved, not launched locally
 
 # Advanced parameters for each driver type
 DRIVER_PARAMS = {

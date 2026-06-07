@@ -25,3 +25,6 @@ tel_ticks = {}
 
 # MQTTBridge instance created at startup, or None if disabled / not configured
 mqtt_bridge = None
+
+# True once a car has completed the race distance - drives the "finished" Pi state
+finished = False

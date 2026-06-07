@@ -1,9 +1,10 @@
 # Web Server and UI for Python Race Orchestrator
 
+import datetime
 import os
 import threading
 from functools import wraps
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from server import state
 from server.config import (
     DRIVER_PARAMS, SIMPLE_PARAMS, DEFAULT_SIMPLE, DRIVER_DISPLAY,
@@ -13,9 +14,10 @@ from server.params import expand_simple_params
 from server.history import (
     load_config, save_config,
     load_profiles, save_profiles,
-    load_history,
+    load_history, save_history,
 )
 from server.torcs_control import assign_ports
+from server.plugins import discover_plugins
 from server.telemetry_server import telemetry_listener
 from server.race import do_launch, do_stop, handle_pi_command
 from server import mqtt_bridge as _mqtt
@@ -55,6 +57,7 @@ def index():
     return render_template(
         "index.html",
         cars=state.race_config,
+        plugins=discover_plugins(len(state.race_config)),
         driver_params=DRIVER_PARAMS,
         simple_params=SIMPLE_PARAMS,
         default_simple=DEFAULT_SIMPLE,
@@ -70,11 +73,15 @@ def add():
         return redirect(url_for("index"))
     driver_type = request.form.get("type", "simple_ai")
     name = request.form.get("name", "").strip() or DRIVER_DISPLAY.get(driver_type, driver_type)
-    simple = dict(DEFAULT_SIMPLE.get(driver_type, {}))
-    params = expand_simple_params(driver_type, simple)
     _PALETTE = ['#ff0000','#0000ff','#00cc00','#ffcc00','#cc00cc','#00cccc','#ff6600','#ffffff','#ff69b4','#888888']
     color = _PALETTE[len(state.race_config) % len(_PALETTE)]
-    state.race_config.append({"name": name, "type": driver_type, "params": params, "simple": simple, "color": color})
+    if driver_type == "remote":
+        # A Pi-hosted driver: reserve a grid slot/colour/port only - not launched or tuned locally.
+        state.race_config.append({"name": name, "type": "remote", "color": color})
+    else:
+        simple = dict(DEFAULT_SIMPLE.get(driver_type, {}))
+        params = expand_simple_params(driver_type, simple)
+        state.race_config.append({"name": name, "type": driver_type, "params": params, "simple": simple, "color": color})
     assign_ports()
     save_config()
     return redirect(url_for("index"))
@@ -100,6 +107,11 @@ def update(idx):
     new_color = request.form.get("color", "").strip()
     if new_color:
         car["color"] = new_color
+
+    # Remote cars carry no tunable params - just name/colour.
+    if car.get("type") == "remote":
+        save_config()
+        return redirect(url_for("index"))
 
     # Switch between simple parameter adjustment and more advanced parameter adjustment
     mode = request.form.get("mode", "simple")
@@ -129,7 +141,8 @@ def update(idx):
 # Handlers for launching and stopping TORCS
 @app.route("/launch", methods=["POST"])
 def launch():
-    do_launch()
+    ok, msg = do_launch()
+    flash(msg, "ok" if ok else "error")
     return redirect(url_for("index"))
 
 
@@ -149,6 +162,41 @@ def get_telemetry():
 def get_history():
     with state.lock:
         return jsonify(list(state.race_history))
+
+# Pushes each car's current best lap from live telemetry onto the leaderboard - a manual save
+# fallback in case a lap wasn't captured automatically
+@app.route("/history/push", methods=["POST"])
+def history_push():
+    now = datetime.datetime.now().isoformat(timespec="seconds")
+    with state.lock:
+        for name, t in state.telemetry.items():
+            best = t.get("best_lap", 0)
+            if best and best > 0:
+                state.race_history.append({
+                    "name": name,
+                    "lap": t.get("laps", 0),
+                    "lap_time": round(best, 3),
+                    "timestamp": now,
+                })
+    save_history()
+    return ("", 204)
+
+# Clears the entire leaderboard
+@app.route("/history/clear", methods=["POST"])
+def history_clear():
+    with state.lock:
+        state.race_history.clear()
+    save_history()
+    return ("", 204)
+
+# Removes a single leaderboard entry by its index in the history list
+@app.route("/history/delete/<int:idx>", methods=["POST"])
+def history_delete(idx):
+    with state.lock:
+        if 0 <= idx < len(state.race_history):
+            state.race_history.pop(idx)
+    save_history()
+    return ("", 204)
 
 # Allows for saving of driver profiles with specific parameters
 @app.route("/profile/save", methods=["POST"])

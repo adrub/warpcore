@@ -12,7 +12,7 @@ from .history import save_history
 def telemetry_listener():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Opens socket
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Allows port to be reused
-    sock.bind(("127.0.0.1", TELEMETRY_PORT)) # Sets to receive packets from any local driver
+    sock.bind(("0.0.0.0", TELEMETRY_PORT)) # All interfaces so remote (Pi-hosted) drivers can reach us too
     while True:
         try:
             data, _ = sock.recvfrom(4096) 

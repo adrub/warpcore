@@ -7,7 +7,7 @@ import time
 import xml.etree.ElementTree as ET
 
 from . import state
-from .config import QUICKRACE_XML
+from .config import QUICKRACE_XML, RACE_LAPS
 
 SCR_SERVER_XML_SRC = "/usr/local/share/games/torcs/drivers/scr_server/scr_server.xml"
 SCR_SERVER_XML_DST = os.path.expanduser("~/.torcs/drivers/scr_server/scr_server.xml")
@@ -22,6 +22,12 @@ def assign_ports():
 def patch_quickrace_xml(n_cars):
     tree = ET.parse(QUICKRACE_XML)
     root = tree.getroot()
+    # Set the race length so TORCS ends where the finish monitor watches for it.
+    for section in root.findall("section"):
+        if section.get("name") == "Quick Race":
+            for attnum in section.findall("attnum"):
+                if attnum.get("name") == "laps":
+                    attnum.set("val", str(RACE_LAPS))
     for section in root.findall("section"):
         if section.get("name") in ("Drivers", "Drivers Start List"):
             root.remove(section)

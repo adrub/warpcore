@@ -95,6 +95,17 @@
   </div>
 </header>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, msg in messages %}
+  <div style="margin:10px auto;max-width:900px;padding:10px 14px;border-radius:6px;font-size:13px;
+              border:1px solid {{ '#3a7' if category == 'ok' else '#c33' }};
+              background:{{ 'rgba(51,170,119,0.12)' if category == 'ok' else 'rgba(204,51,51,0.12)' }};
+              color:{{ '#8fe3b8' if category == 'ok' else '#ff9b9b' }}">{{ msg }}</div>
+  {% endfor %}
+  {% endif %}
+{% endwith %}
+
 <section>
   <h2>Drivers</h2>
   <div class="cards">
@@ -123,6 +134,7 @@
           <input type="color" name="color" value="{{ car.get('color', '#ff0000') }}" title="Car colour in TORCS" style="width:36px;height:32px;padding:2px;cursor:pointer;border:1px solid var(--border);background:var(--surface)">
         </div>
 
+        {% if ctype in simple_params %}
         {% for section_name, sliders in simple_params[ctype].items() %}
         <details class="param-section" open>
           <summary>{{ section_name }}</summary>
@@ -158,6 +170,7 @@
             {% endfor %}
           </div>
         </details>
+        {% endif %}
 
         <div class="card-actions">
           <button type="submit" class="btn btn-save">Save</button>
@@ -212,6 +225,28 @@
     <button type="submit" class="btn-add">Add Driver</button>
   </form>
   {% endif %}
+
+  {% if plugins %}
+  <h2 style="margin-top:28px">Detected Plugins</h2>
+  <p style="color:var(--muted);font-size:11px;margin-bottom:10px;letter-spacing:0.05em">
+    Auto-detected from the <code>plugins/</code> folder. Each is assigned a port and colour and races on the standard car.
+  </p>
+  <table class="tel-table">
+    <thead>
+      <tr><th>Driver</th><th>Port</th><th>Colour</th><th>File</th></tr>
+    </thead>
+    <tbody>
+      {% for p in plugins %}
+      <tr>
+        <td class="td-name" style="border-left:3px solid {{ p.color }};padding-left:9px">{{ p.name }}</td>
+        <td>:{{ p.port }}</td>
+        <td><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:{{ p.color }};border:1px solid var(--border)"></span></td>
+        <td style="color:var(--muted);font-size:11px">{{ p.file }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </section>
 
 <section>
@@ -238,7 +273,10 @@
 </section>
 
 <section>
-  <h2>Live Telemetry</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h2>Live Telemetry</h2>
+    <button type="button" class="btn-sm" onclick="pushTelemetryToLeaderboard()">Push to Leaderboard</button>
+  </div>
   <table class="tel-table">
     <thead>
       <tr>
@@ -253,13 +291,16 @@
 </section>
 
 <section>
-  <h2>Race History</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h2>Race History</h2>
+    <button type="button" class="btn-sm btn-sm-red" onclick="clearHistory()">Clear All</button>
+  </div>
   <table class="tel-table">
     <thead>
-      <tr><th>Car</th><th>Lap</th><th>Lap Time</th><th>When</th></tr>
+      <tr><th>Car</th><th>Lap</th><th>Lap Time</th><th>When</th><th></th></tr>
     </thead>
     <tbody id="history-body">
-      <tr><td colspan="4" class="no-data">No laps recorded yet.</td></tr>
+      <tr><td colspan="5" class="no-data">No laps recorded yet.</td></tr>
     </tbody>
   </table>
 </section>
