@@ -157,6 +157,12 @@ def get_telemetry():
     with state.lock:
         return jsonify(dict(state.telemetry))
 
+# Lightweight race status so the dashboard knows when to stop plotting (race over) and when to
+# reset its graphs (a fresh launch).
+@app.route("/race_status")
+def race_status():
+    return jsonify({"finished": state.finished, "running": bool(state.procs)})
+
 # Returns race history
 @app.route("/history")
 def get_history():

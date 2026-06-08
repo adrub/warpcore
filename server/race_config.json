@@ -43,5 +43,53 @@
     },
     "color": "#ff0000",
     "port": 3001
+  },
+  {
+    "name": "SimpleAI",
+    "type": "simple_ai",
+    "params": {
+      "brake_emergency_force": 0.72,
+      "brake_hard_force": 0.54,
+      "brake_early_force": 0.4,
+      "brake_soft_force": 0.22999999999999998,
+      "brake_emergency_speed": 54.0,
+      "brake_hard_speed": 76.0,
+      "brake_early_speed": 108.0,
+      "brake_soft_speed": 74.0,
+      "brake_emergency_range": 32.5,
+      "brake_early_range": 120.0,
+      "brake_hard_range": 80.5,
+      "brake_soft_range": 43.0,
+      "upshift_threshold": 0.85,
+      "downshift_rpm": 9500.0,
+      "straight_throttle": 0.9,
+      "medium_corner_throttle": 0.725,
+      "tight_corner_throttle": 0.5,
+      "opp_overtake_offset": 0.44999999999999996,
+      "opp_offset_inc": 0.06,
+      "opp_brake_dist": 9.5,
+      "opp_close_speed": 5.5,
+      "opp_slow_dist": 25.0,
+      "opp_clear_dist": 36.0,
+      "apex_aggressiveness": 0.6,
+      "tc_slip": 1.6600000000000001,
+      "angle_gain": 0.6000000000000001,
+      "position_gain": 0.35
+    },
+    "simple": {
+      "steering_responsiveness": 0.5,
+      "brake_force": 0.6,
+      "brake_distance": 0.7,
+      "shift_aggression": 0.5,
+      "straight_speed": 0.8,
+      "corner_caution": 0.5,
+      "opp_commitment": 0.5,
+      "opp_aggressiveness": 0.5,
+      "opp_detection": 0.6,
+      "apex_aggressiveness": 0.6,
+      "tc_slip": 0.4
+    },
+    "color": "#0000ff",
+    "port": 3002
   }
 ]

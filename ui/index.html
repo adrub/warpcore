@@ -272,23 +272,65 @@
   {% endif %}
 </section>
 
+<style>
+.dash-tabs{display:flex;gap:6px;margin-bottom:10px}
+.dash-tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 16px;cursor:pointer;border-radius:4px;font-size:12px;letter-spacing:.05em}
+.dash-tab.active{color:#fff;border-color:#0f62fe;background:rgba(15,98,254,.15)}
+.dash-pane{display:none}
+.dash-pane.active{display:block}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;height:240px;display:flex;flex-direction:column}
+.chart-box h3{margin:0 0 6px;font-size:12px;color:var(--muted);letter-spacing:.05em}
+.chart-box canvas{flex:1;min-height:0}
+#track-map{display:block;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+</style>
+
 <section>
   <div style="display:flex;align-items:center;justify-content:space-between">
-    <h2>Live Telemetry</h2>
+    <h2>Live Dashboard</h2>
     <button type="button" class="btn-sm" onclick="pushTelemetryToLeaderboard()">Push to Leaderboard</button>
   </div>
-  <table class="tel-table">
-    <thead>
-      <tr>
-        <th>Car</th><th>Speed</th><th>Gear</th><th>RPM</th>
-        <th>Lap Time</th><th>Best Lap</th><th>Laps</th><th>Pos</th><th>Damage</th>
-      </tr>
-    </thead>
-    <tbody id="tel-body">
-      <tr><td colspan="9" class="no-data">No telemetry — launch a race to begin.</td></tr>
-    </tbody>
-  </table>
+  <div class="dash-tabs">
+    <button class="dash-tab active" data-pane="pane-table" onclick="showDashTab(this)">Table</button>
+    <button class="dash-tab" data-pane="pane-graphs" onclick="showDashTab(this)">Graphs</button>
+    <button class="dash-tab" data-pane="pane-map" onclick="showDashTab(this)">Map</button>
+  </div>
+
+  <div id="pane-table" class="dash-pane active">
+    <table class="tel-table">
+      <thead>
+        <tr>
+          <th>Car</th><th>Speed</th><th>Gear</th><th>RPM</th>
+          <th>Lap Time</th><th>Best Lap</th><th>Laps</th><th>Pos</th><th>Damage</th>
+        </tr>
+      </thead>
+      <tbody id="tel-body">
+        <tr><td colspan="9" class="no-data">No telemetry — launch a race to begin.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="pane-graphs" class="dash-pane">
+    <div class="chart-grid">
+      <div class="chart-box"><h3>Speed (km/h)</h3><canvas id="chart-speed"></canvas></div>
+      <div class="chart-box"><h3>RPM</h3><canvas id="chart-rpm"></canvas></div>
+      <div class="chart-box"><h3>Damage</h3><canvas id="chart-damage"></canvas></div>
+      <div class="chart-box"><h3>Race Position</h3><canvas id="chart-pos"></canvas></div>
+    </div>
+  </div>
+
+  <div id="pane-map" class="dash-pane">
+    <canvas id="track-map" width="960" height="520"></canvas>
+  </div>
 </section>
+
+<script>
+// Real per-car TORCS colours (configured cars + detected plugins), keyed by name, for the graphs/map.
+window.CAR_COLOR_MAP = {
+  {% for c in cars %}{{ c.name|tojson }}: {{ (c.get('color') or '#0f62fe')|tojson }},{% endfor %}
+  {% for p in plugins %}{{ p.name|tojson }}: {{ p.color|tojson }},{% endfor %}
+};
+</script>
 
 <section>
   <div style="display:flex;align-items:center;justify-content:space-between">
@@ -316,6 +358,7 @@
 <!-- defer keeps the load order: utils → space (exposes triggerHyperspace) → telemetry → boot -->
 <script src="{{ url_for('static', filename='js/utils.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/space.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/chart.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/telemetry.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/boot.js') }}" defer></script>
 
