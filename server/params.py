@@ -13,6 +13,7 @@ def expand_simple_params(driver_type, simple):
     cc = simple.get("corner_caution",   0.5)
     oa = simple.get("opp_aggressiveness", 0.5)
     od = simple.get("opp_detection",      0.6)
+    oc = simple.get("opp_commitment",     0.5)
 
     raw = {
         # Braking forces - how hard each tier presses the pedal
@@ -37,10 +38,12 @@ def expand_simple_params(driver_type, simple):
         "medium_corner_throttle":  linear_interpolate(0.95, 0.5,   cc),  # higher cc = lower throttle in corners
         "tight_corner_throttle":   linear_interpolate(0.8,  0.2,   cc),
         # Opponent avoidance
-        "opp_overtake_offset": linear_interpolate(0.2, 0.7,  oa),
-        "opp_brake_dist":      linear_interpolate(15,  4,    oa),       # more aggressive = brake closer
-        "opp_slow_dist":       linear_interpolate(10,  35,   od),
-        "opp_clear_dist":      linear_interpolate(15,  50,   od),
+        "opp_overtake_offset": linear_interpolate(0.2,  0.7,  oc),   # how far to pull aside to pass
+        "opp_offset_inc":      linear_interpolate(0.02, 0.10, oc),   # how fast to slide aside per tick
+        "opp_brake_dist":      linear_interpolate(15,   4,    oa),   # higher = brake closer (aggressive)
+        "opp_close_speed":     linear_interpolate(3.0,  8.0,  oa),   # higher = only brake on faster closes
+        "opp_slow_dist":       linear_interpolate(10,   35,   od),
+        "opp_clear_dist":      linear_interpolate(15,   50,   od),
         # Dynamics
         # Racing line: 1.0 = always hug the inside (apex), 0.0 = hug the outside, 0.5 = centre.
         # Passed straight through (the slider already spans 0..1).

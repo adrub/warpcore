@@ -66,14 +66,25 @@ def opponent_action(sensors, params, state):
     clear_dist      = params.get("opp_clear_dist", 30)
     overtake_offset = params.get("opp_overtake_offset", 0.4)
     side_dist       = params.get("opp_side_dist", 10)
+    offset_inc      = params.get("opp_offset_inc", 0.04)   # how fast to slide sideways per tick
 
     speed = sensors.get("speedX", 0)
+
+    # Closing speed on the car ahead (m/s): SCR gives no opponent speed, but differencing the
+    # front-gap distance between ticks tells us whether we're actually catching it. Smoothed, and
+    # frames where the reading jumps (a car entering/leaving the front window) are ignored.
+    DT = 0.02
+    prev_fwd = state.get("fwd_prev", fwd_dist)
+    if fwd_dist < 190 and prev_fwd < 190 and abs(fwd_dist - prev_fwd) < 30:
+        closing = 0.6 * state.get("closing", 0.0) + 0.4 * (prev_fwd - fwd_dist) / DT
+    else:
+        closing = 0.5 * state.get("closing", 0.0)
+    state["fwd_prev"], state["closing"] = fwd_dist, closing
 
     # Longitudinal response to a car directly ahead:
     #  - imminent (< brake_dist): hard brake, no throttle
     #  - closing (< slow_dist): ease the throttle to match its pace AND brake progressively if we
-    #    are carrying speed, so a fast car never coasts into the back of a slower one. The brake is
-    #    gated above 40 km/h so grid cars at the start ease rather than brake (no stall).
+    #    are carrying speed, so a fast car never coasts into the back of a slower one.
     #  - clear: full throttle
     if fwd_dist < brake_dist:
         extra_brake = 0.6
@@ -86,51 +97,71 @@ def opponent_action(sensors, params, state):
         extra_brake = 0.0
         throttle_scale = 1.0
 
-    # HIGHEST PRIORITY, active even at a standstill: if a car is alongside, steer away from it.
-    # Checked before the overtake logic so two cars can never converge into each other - on the
-    # grid at the start or contesting a line mid-race.
-    # Boxed in on both flanks: don't steer into either - hold the line and ease back to let it clear.
+    # Closing-aware braking: if we're catching the car ahead fast, shed speed EARLIER than the
+    # fixed distance tiers above (a rough "can't stop in time" guard). Scales with closing speed.
+    close_speed = params.get("opp_close_speed", 5.0)   # closing m/s above which to start braking
+    if closing > close_speed and fwd_dist < slow_dist + closing * 1.5:
+        extra_brake = max(extra_brake, min(0.6, (closing - close_speed) / 15.0))
+        throttle_scale = min(throttle_scale, 0.6)
+
+    # Decide the DESIRED lateral offset, and whether to SNAP to it (safety) or EASE into it (a pass).
+    #   desired = None  -> no opponent influence; ease back to centre then hand off to the racing line
+    snap, desired = False, None
+
+    # HIGHEST PRIORITY: a car alongside -> move away NOW (snapped, even at a standstill), so two
+    # cars never converge. Boxed in on both flanks -> hold centre and ease off to let it clear.
     if left_side < side_dist and right_side < side_dist:
-        return 0.0, max(extra_brake, 0.3), throttle_scale
-    if left_side < side_dist and left_side <= right_side:
-        return -overtake_offset, extra_brake, throttle_scale     # car on the left -> move right
-    if right_side < side_dist and right_side < left_side:
-        return overtake_offset, extra_brake, throttle_scale    # car on the right -> move left
-
-    side = state["side"]
-
-    if side is None:
-        if fwd_dist < slow_dist:
-            # Prefer diving to the INSIDE of the corner (the classic out-braking overtake) when
-            # that side is clear of cars; only fall back to the side with more room (the outside)
-            # on straights or when the inside is blocked. Inside is the side the track curves
-            # toward, from the same sensor imbalance the apex line uses.
-            track     = sensors.get("track", [100] * 19)
-            imbalance = sum(track[10:19]) / 9 - sum(track[0:9]) / 9   # >0 = curves left
-            if abs(imbalance) > 10:  # in a corner
-                inside     = "left" if imbalance > 0 else "right"
-                inside_gap = left_gap if inside == "left" else right_gap
-                side = inside if inside_gap > slow_dist else ("left" if left_gap > right_gap else "right")
-            else:
-                side = "left" if left_gap > right_gap else "right"
-            state["side"] = side
+        desired, snap, extra_brake = 0.0, True, max(extra_brake, 0.3)
+    elif left_side < side_dist and left_side <= right_side:
+        desired, snap = -overtake_offset, True                       # car on the left -> move right
+    elif right_side < side_dist and right_side < left_side:
+        desired, snap = overtake_offset, True                        # car on the right -> move left
     else:
-        alongside = right_side < 15 if side == "left" else left_side < 15
-        if fwd_dist > clear_dist and not alongside:
-            state["side"] = None
-            side = None
+        # Nobody alongside: commit to a side to pass a car ahead, release the commitment when clear.
+        side = state.get("side")
+        if side is None:
+            if fwd_dist < slow_dist:
+                # Prefer diving to the INSIDE of the corner (classic out-braking pass) when that
+                # side is clear; otherwise take the side with more room.
+                track     = sensors.get("track", [100] * 19)
+                imbalance = sum(track[10:19]) / 9 - sum(track[0:9]) / 9   # >0 = curves left
+                if abs(imbalance) > 10:  # in a corner
+                    inside     = "left" if imbalance > 0 else "right"
+                    inside_gap = left_gap if inside == "left" else right_gap
+                    side = inside if inside_gap > slow_dist else ("left" if left_gap > right_gap else "right")
+                else:
+                    side = "left" if left_gap > right_gap else "right"
+                state["side"] = side
+        else:
+            alongside = right_side < 15 if side == "left" else left_side < 15
+            if fwd_dist > clear_dist and not alongside:
+                state["side"] = None
+                side = None
+        if side == "left":
+            desired = overtake_offset
+        elif side == "right":
+            desired = -overtake_offset
+        # else desired stays None -> clear road
 
-    if side == "left":
-        target_offset = overtake_offset
-    elif side == "right":
-        target_offset = -overtake_offset
-    else:
-        # None = no opponent influence; the caller falls back to the racing line. (A real 0.0
-        # returned earlier means "boxed in, hold centre" and must NOT be overridden - hence the
-        # None-vs-0.0 distinction. Callers check `if target_offset is None`.)
-        target_offset = None
+    # Apply the offset: snap for safety, otherwise slide toward `desired` (or back to centre) a
+    # step per tick so passes look deliberate instead of darting.
+    cur  = state.get("offset", 0.0)
+    goal = 0.0 if desired is None else desired
+    if snap:
+        cur = goal
+    elif cur < goal:
+        cur = min(goal, cur + offset_inc)
+    elif cur > goal:
+        cur = max(goal, cur - offset_inc)
+    state["offset"] = cur
 
-    return target_offset, extra_brake, throttle_scale
+    # Hand back to the racing line only once there's no opponent influence AND we've eased to
+    # centre, so a pass finishes smoothly instead of snapping to the apex mid-move. A returned 0.0
+    # (boxed in) is held and NOT overridden; None means "use the racing line". Callers check None.
+    if desired is None and abs(cur) < offset_inc:
+        state["offset"] = 0.0
+        return None, extra_brake, throttle_scale
+    return cur, extra_brake, throttle_scale
 
 
 class Driver:

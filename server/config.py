@@ -44,6 +44,8 @@ DRIVER_PARAMS = {
         "opp_overtake_offset": 0.4,
         "opp_clear_dist": 30,
         "opp_side_dist": 10,
+        "opp_offset_inc": 0.04,
+        "opp_close_speed": 5.0,
     },
     "pid_ai": {
         "steer_kp": 0.3,
@@ -71,6 +73,8 @@ DRIVER_PARAMS = {
         "opp_overtake_offset": 0.4,
         "opp_clear_dist": 30,
         "opp_side_dist": 10,
+        "opp_offset_inc": 0.04,
+        "opp_close_speed": 5.0,
     },
     "stanley_ai": {
         "stanley_k": 1.0,
@@ -97,6 +101,8 @@ DRIVER_PARAMS = {
         "opp_overtake_offset": 0.4,
         "opp_clear_dist": 30,
         "opp_side_dist": 10,
+        "opp_offset_inc": 0.04,
+        "opp_close_speed": 5.0,
     },
 }
 
@@ -111,8 +117,9 @@ _ACCEL_SLIDERS = [
     {"key": "corner_caution",   "label": "Corner Caution",   "min": 0.0, "max": 1.0, "step": 0.05},
 ]
 _OPP_SLIDERS = [
-    {"key": "opp_aggressiveness", "label": "Aggressiveness",   "min": 0.0, "max": 1.0, "step": 0.05},
-    {"key": "opp_detection",      "label": "Detection Range",  "min": 0.0, "max": 1.0, "step": 0.05},
+    {"key": "opp_commitment",     "label": "Overtake Commitment", "min": 0.0, "max": 1.0, "step": 0.05},
+    {"key": "opp_aggressiveness", "label": "Brake Closeness",     "min": 0.0, "max": 1.0, "step": 0.05},
+    {"key": "opp_detection",      "label": "Awareness Range",     "min": 0.0, "max": 1.0, "step": 0.05},
 ]
 _DYNAMICS_SLIDERS = [
     {"key": "apex_aggressiveness", "label": "Racing Line (0 outside → 1 inside)", "min": 0.0, "max": 1.0, "step": 0.05},
@@ -158,21 +165,21 @@ DEFAULT_SIMPLE = {
         "stanley_k": 1.0, "stanley_ks": 1.0,
         "brake_force": 0.6, "brake_distance": 0.7,
         "shift_aggression": 0.5, "straight_speed": 0.8, "corner_caution": 0.5,
-        "opp_aggressiveness": 0.5, "opp_detection": 0.6,
+        "opp_commitment": 0.5, "opp_aggressiveness": 0.5, "opp_detection": 0.6,
         "apex_aggressiveness": 0.6, "tc_slip": 0.4,
     },
     "pid_ai": {
         "steer_kp": 0.3, "steer_ki": 0.0, "steer_kd": 0.5,
         "brake_force": 0.6, "brake_distance": 0.7,
         "shift_aggression": 0.5, "straight_speed": 0.8, "corner_caution": 0.5,
-        "opp_aggressiveness": 0.5, "opp_detection": 0.6,
+        "opp_commitment": 0.5, "opp_aggressiveness": 0.5, "opp_detection": 0.6,
         "apex_aggressiveness": 0.6, "tc_slip": 0.4,
     },
     "simple_ai": {
         "steering_responsiveness": 0.5,
         "brake_force": 0.6, "brake_distance": 0.7,
         "shift_aggression": 0.5, "straight_speed": 0.8, "corner_caution": 0.5,
-        "opp_aggressiveness": 0.5, "opp_detection": 0.6,
+        "opp_commitment": 0.5, "opp_aggressiveness": 0.5, "opp_detection": 0.6,
         "apex_aggressiveness": 0.6, "tc_slip": 0.4,
     },
 }

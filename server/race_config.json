@@ -1,6 +1,6 @@
 [
   {
-    "name": "SimpleAI",
+    "name": "SimpleAI2",
     "type": "simple_ai",
     "params": {
       "brake_emergency_force": 0.9299999999999999,
@@ -43,11 +43,5 @@
     },
     "color": "#ff0000",
     "port": 3001
-  },
-  {
-    "name": "Remote (Pi)",
-    "type": "remote",
-    "color": "#0000ff",
-    "port": 3002
   }
 ]
