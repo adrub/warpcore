@@ -1,0 +1,123 @@
+/* Futuristic theme overlay - loaded ONLY by futuristic.html (/futuristic route).
+   Overrides the base palette and skins the components with glass + cyan neon + a HUD grid.
+   The original / page never loads this file, so it stays exactly as-is. */
+
+:root {
+  --bg:       #04070f;
+  --bg-card:  rgba(12, 24, 46, 0.42);
+  --bg-input: rgba(4, 12, 26, 0.55);
+  --blue:     #22d3ee;   /* electric cyan accent */
+  --cyan:     #8be9ff;
+  --text:     #d6ecff;
+  --muted:    rgba(140, 190, 240, 0.42);
+  --border:   rgba(34, 211, 238, 0.22);
+  --glow:     rgba(34, 211, 238, 0.10);
+}
+
+/* Deep gradient backdrop (over the star canvas) + a faded HUD grid via ::before. */
+body.theme-futuristic {
+  background:
+    radial-gradient(circle at 18% -10%, rgba(34,211,238,0.10), transparent 42%),
+    radial-gradient(circle at 85% 110%, rgba(124,77,255,0.10), transparent 46%),
+    var(--bg);
+}
+body.theme-futuristic::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(34,211,238,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,0.045) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(circle at 50% 26%, #000 0%, transparent 78%);
+          mask-image: radial-gradient(circle at 50% 26%, #000 0%, transparent 78%);
+}
+
+/* Headings: sci-fi display face with a cyan glow. */
+.theme-futuristic h2,
+.theme-futuristic .header-title {
+  font-family: 'Orbitron', 'IBM Plex Mono', monospace;
+  letter-spacing: 0.16em;
+  color: #eafdff;
+  text-shadow: 0 0 14px rgba(34,211,238,0.45);
+}
+.theme-futuristic h2::before { color: var(--blue); text-shadow: 0 0 10px var(--blue); }
+.theme-futuristic h2::after  { background: linear-gradient(90deg, rgba(34,211,238,0.5), transparent); }
+
+/* Glass panels with a neon edge + a glowing top accent line. */
+.theme-futuristic .card,
+.theme-futuristic .chart-box,
+.theme-futuristic .add-form,
+.theme-futuristic #track-map,
+.theme-futuristic .tel-table {
+  background: var(--bg-card);
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 26px rgba(34,211,238,0.06), inset 0 0 32px rgba(34,211,238,0.025);
+}
+.theme-futuristic .card { position: relative; overflow: hidden; }
+.theme-futuristic .card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent); opacity: 0.7;
+}
+.theme-futuristic .card:hover {
+  box-shadow: 0 0 34px rgba(34,211,238,0.14), inset 0 0 32px rgba(34,211,238,0.04);
+}
+
+/* Tables: glowing header rule + cyan row hover. */
+.theme-futuristic .tel-table thead th {
+  color: var(--cyan); border-bottom: 1px solid var(--border);
+  text-shadow: 0 0 8px rgba(34,211,238,0.3);
+}
+.theme-futuristic .tel-table tbody tr:hover { background: rgba(34,211,238,0.05); }
+
+/* Badges + dashboard tabs: neon. */
+.theme-futuristic .badge-type { border-color: var(--border); color: var(--cyan); background: rgba(34,211,238,0.07); }
+.theme-futuristic .dash-tab { border-color: var(--border); color: var(--muted); }
+.theme-futuristic .dash-tab.active {
+  color: #eafdff; border-color: var(--blue);
+  background: rgba(34,211,238,0.12); box-shadow: 0 0 14px rgba(34,211,238,0.25);
+}
+
+/* Buttons: keep their semantic colours, add a neon glow. */
+.theme-futuristic .btn-launch:hover { box-shadow: 0 0 20px rgba(61,220,103,0.45); }
+.theme-futuristic .btn-add {
+  border-color: var(--blue); color: var(--cyan); box-shadow: 0 0 12px rgba(34,211,238,0.18);
+}
+.theme-futuristic .btn-add:hover { background: rgba(34,211,238,0.1); box-shadow: 0 0 20px rgba(34,211,238,0.35); }
+.theme-futuristic .btn-sm:hover { color: var(--blue); border-color: var(--blue); }
+
+/* Header / footer chrome + slider accents. */
+.theme-futuristic .terminal-id-bar,
+.theme-futuristic .pfk-strip { border-color: var(--border); }
+.theme-futuristic .pfk { color: var(--blue); text-shadow: 0 0 8px rgba(34,211,238,0.4); }
+.theme-futuristic input[type="range"] { accent-color: var(--blue); }
+.theme-futuristic .slider-val { color: var(--blue); }
+
+/* ============================================================================
+   MOTORSPORT LAYER - high-octane F1 accents on top of the space-tech base.
+   ============================================================================ */
+
+/* Carbon-fibre weave on the main panels (subtle, so the glass still reads). */
+.theme-futuristic .card,
+.theme-futuristic .chart-box {
+  background:
+    repeating-linear-gradient(45deg,  rgba(255,255,255,0.022) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 5px),
+    var(--bg-card);
+}
+
+/* F1 start-lights: hold RED, flip to GREEN ("lights out, GO!") while a race is running. */
+.theme-futuristic .f1-lights {
+  display: inline-flex; gap: 7px; padding: 7px 9px;
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 5px;
+}
+.theme-futuristic .f1-lights span {            /* round lights */
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid rgba(255,70,80,0.5);
+  background: #ff263a; box-shadow: 0 0 14px #ff263a, inset 0 0 5px rgba(255,255,255,0.35);
+  transition: background .2s, box-shadow .2s, border-color .2s;
+}
+.theme-futuristic .f1-lights.go span {
+  border-color: rgba(60,255,140,0.6);
+  background: #39ff8b; box-shadow: 0 0 16px #39ff8b, inset 0 0 4px rgba(255,255,255,0.45);
+}
+

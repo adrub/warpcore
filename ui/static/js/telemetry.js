@@ -82,7 +82,9 @@ async function clearHistory() {
 // track map. No backend change - we just sample the /telemetry poll over time.
 // ---------------------------------------------------------------------------
 const SERIES_MAX = 9000;         // keep the whole race (~37 min at 4 Hz) so graphs + map persist
+const STALE_LIMIT = 10;          // stop a car's trail only after its data is constant this many ticks
 const series = {};               // car name -> [{t, speed, rpm, x, y}]
+const staleCount = {};           // per-car run of consecutive identical (frozen) packets
 let dashStart = Date.now();
 const charts = {};
 let activePane = 'pane-table';
@@ -98,6 +100,7 @@ async function refreshStatus() {
     raceFinished = !!st.finished;
     if (st.running && !prevRunning) {           // a new race just launched -> start clean
       for (const k in series) delete series[k];
+      for (const k in staleCount) delete staleCount[k];
       dashStart = Date.now();
     }
     prevRunning = !!st.running;
@@ -120,16 +123,21 @@ function showDashTab(btn) {
 }
 
 function pushSeries(entries) {
-  if (raceFinished) return;        // official finish (chequered flag): freeze everything
   const t = (Date.now() - dashStart) / 1000;
   entries.forEach(e => {
     const s = series[e.name] || (series[e.name] = []);
     const last = s[s.length - 1];
     const speed = e.speed || 0, rpm = e.rpm || 0, x = e.x || 0, y = e.y || 0;
-    // Skip FROZEN telemetry: a moving car's x/y/speed change every tick, so an identical sample to
-    // the previous one means its data has flatlined (race over / driver stopped sending). This is
-    // what actually kills the flat tail - it's per-car, so a still-running car keeps plotting.
-    if (last && last.speed === speed && last.rpm === rpm && last.x === x && last.y === y) return;
+    // A moving car's x/y change every tick. Only when a car's packet is IDENTICAL for many ticks
+    // (it finished / stopped sending) do we stop ITS trail - so the map keeps updating for every
+    // car still circulating, and one car finishing never freezes the whole dashboard.
+    const same = last && last.speed === speed && last.rpm === rpm && last.x === x && last.y === y;
+    if (same) {
+      staleCount[e.name] = (staleCount[e.name] || 0) + 1;
+      if (staleCount[e.name] > STALE_LIMIT) return;   // constant too long -> this car is done
+    } else {
+      staleCount[e.name] = 0;
+    }
     s.push({ t, speed, rpm, pos: e.race_pos || 0, x, y });
     if (s.length > SERIES_MAX) s.shift();
   });

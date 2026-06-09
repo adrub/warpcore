@@ -51,11 +51,9 @@ def logout():
     return redirect(url_for('login'))
 
 # Launches main page and assigns ports for cars in config json
-@app.route("/")
-def index():
+def _dashboard_context():
     assign_ports()
-    return render_template(
-        "index.html",
+    return dict(
         cars=state.race_config,
         plugins=discover_plugins(len(state.race_config)),
         driver_params=DRIVER_PARAMS,
@@ -65,6 +63,10 @@ def index():
         running=bool(state.procs),
         profiles=state.profiles,
     )
+
+@app.route("/")
+def index():
+    return render_template("futuristic.html", **_dashboard_context())
 
 # Handler for adding a new driver
 @app.route("/add", methods=["POST"])

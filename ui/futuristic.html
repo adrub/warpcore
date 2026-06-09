@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Warp-Core Racing</title>
+  <title>Warp-Core // Futuristic</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/effects.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/futuristic.css') }}">
 
   <!-- Runs before paint - hides the boot overlay on subsequent page loads in the same session -->
   <script>
@@ -19,7 +20,7 @@
     }
   </script>
 </head>
-<body>
+<body class="theme-futuristic">
 <canvas id="space-bg"></canvas>
 
 <!-- Boot overlay (shown once per session, replayable via PF3) -->
@@ -61,11 +62,15 @@
 </div>
 
 <header class="site-header">
-  <div>
-    <div class="header-title">MISSION CONTROL</div>
-    <div class="header-sub">TORCS AI Racing Simulator</div>
-    <div class="header-sys">SYS — {{ cars|length }} DRIVER{{ 'S' if cars|length != 1 else '' }} · {{ 'RACE ACTIVE' if running else 'STANDBY' }}</div>
+  <div style="display:flex;align-items:center;gap:24px">
+    <div>
+      <div class="header-title">MISSION CONTROL</div>
+      <div class="header-sub">TORCS AI Racing Simulator</div>
+      <div class="header-sys">SYS — {{ cars|length }} DRIVER{{ 'S' if cars|length != 1 else '' }} · {{ 'RACE ACTIVE' if running else 'STANDBY' }}</div>
+    </div>
+    <div class="f1-lights" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
   </div>
+
   <div class="header-ibm">
     <div class="header-ibm-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 31" height="44" fill="#0f62fe" aria-label="IBM">
@@ -361,6 +366,19 @@ window.CAR_COLOR_MAP = {
 <script src="{{ url_for('static', filename='js/chart.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/telemetry.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/boot.js') }}" defer></script>
+
+<script>
+// F1 start-lights: stay RED, turn GREEN ("lights out, GO!") while a race is running (you pressed Launch).
+(function () {
+  const lights = document.querySelector('.f1-lights');
+  if (!lights) return;
+  async function tick() {
+    try { lights.classList.toggle('go', !!(await fetch('/race_status').then(r => r.json())).running); }
+    catch (_) {}
+  }
+  tick(); setInterval(tick, 800);
+})();
+</script>
 
 <script>
   // Tiny inline handler - kicks off the hyperspace effect, then submits the launch form
