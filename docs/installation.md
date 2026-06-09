@@ -34,6 +34,12 @@ sudo apt-get install -y build-essential git libglib2.0-dev libgl1-mesa-dev libgl
 
 Wait for it to finish.
 
+Then install the tools the control panel itself needs — `xdotool` (lets the wrapper drive the TORCS menus automatically) and the Python libraries (Flask web server, Pillow for the car colours, paho-mqtt for the Raspberry Pi link):
+
+```bash
+sudo apt-get install -y xdotool python3-flask python3-pil python3-paho-mqtt
+```
+
 ---
 
 ## 3. Clone and compile TORCS
@@ -96,39 +102,29 @@ The integrated terminal in VS Code (`` Ctrl+` ``) will now be an Ubuntu terminal
 
 ---
 
-## 6. Running a Race (manual TORCS)
+## 6. Running the Control Panel
 
-You need **two terminals open at the same time**:
+This is the normal way to run everything — the Python wrapper launches TORCS and the cars for you, no manual setup.
 
-### Terminal 1 — Ubuntu terminal (for TORCS)
-
-Open Ubuntu from the **Start menu** (not the VS Code terminal) and run:
+From the project folder:
 
 ```bash
-torcs
+cd ~/warpcore
+python3 client.py
 ```
 
-A TORCS window appears. Set up the race:
+It prints `UI running at http://localhost:5000`. Open that address in your **Windows browser** (WSL forwards `localhost` automatically) and log in:
 
-1. **Race → Quick Race → Configure Race**
-2. Select the **Corkscrew** track
-3. Add **scr_server 1** as a competitor
-4. Set laps to 3
-5. Click **Accept → New Race**
+- **Username:** `admin`
+- **Password:** `password`
 
-The car freezes on the grid. The terminal shows `Waiting for request on port 3001`. Leave it running.
+Add one or more drivers, give them colours, then press **Launch Race** (or `PF5`). TORCS opens and the cars race automatically; live telemetry, graphs and the track map appear on the page. **Stop Race** (`PF12`) ends it.
 
-### Terminal 2 — VS Code terminal (for Python)
+> **Using a Raspberry Pi** for the lights/buttons? Set `MQTT_BROKER` in `server/config.py` to the broker's IP first. If you're **not** using the Pi, leave it as `localhost` — MQTT just stays disabled and everything else works.
 
-In VS Code press `` Ctrl+` `` to open the integrated terminal. Run:
+### Testing a single driver by hand (optional)
 
-```bash
-python3 filename.py
-```
-
-The car should start moving in TORCS and you'll see debug output in the VS Code terminal.
-
-**Don't run TORCS from the VS Code terminal** — it needs its own terminal window for the graphical display.
+To run one driver against a manually-started TORCS (no wrapper): open TORCS from the **Start menu** with `torcs`, set up a Quick Race on **Corkscrew** with **scr_server 1**, then in a second terminal run e.g. `python3 simple_ai.py --port 3001`.
 
 ---
 
