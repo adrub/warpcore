@@ -159,8 +159,7 @@ def get_telemetry():
     with state.lock:
         return jsonify(dict(state.telemetry))
 
-# Lightweight race status so the dashboard knows when to stop plotting (race over) and when to
-# reset its graphs (a fresh launch).
+# Race status
 @app.route("/race_status")
 def race_status():
     return jsonify({"finished": state.finished, "running": bool(state.procs)})
@@ -171,8 +170,7 @@ def get_history():
     with state.lock:
         return jsonify(list(state.race_history))
 
-# Pushes each car's current best lap from live telemetry onto the leaderboard - a manual save
-# fallback in case a lap wasn't captured automatically
+# Manual save of cars best lap times to the history
 @app.route("/history/push", methods=["POST"])
 def history_push():
     now = datetime.datetime.now().isoformat(timespec="seconds")
