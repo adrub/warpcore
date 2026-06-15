@@ -15,6 +15,7 @@ def main():
 
     led_controller = LEDController()
     state_machine = RaceStateMachine(led_controller=led_controller)
+    state_machine.set_state("idle")
     telemetry_handler = TelemetryHandler()
 
     mqtt_client = PiMQTTClient(
@@ -24,9 +25,7 @@ def main():
 
     control_publisher = ControlPublisher(mqtt_client)
 
-    button_controller = ButtonController(
-        control_callback=control_publisher.send_command
-    )
+    button_controller = ButtonController(control_publisher=control_publisher)
 
     mqtt_client.connect()
 
@@ -59,6 +58,7 @@ def main():
 
     finally:
         mqtt_client.disconnect()
+        led_controller.clear()
         print("[SYSTEM] Pi controller stopped")
 
 

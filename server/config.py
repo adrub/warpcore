@@ -12,7 +12,7 @@ MAX_CARS       = 10
 RACE_LAPS      = 1     # race length; the finish monitor watches for a car reaching this lap count
 
 # MQTT config
-MQTT_BROKER = "localhost" # <--- change to IP of PI
+MQTT_BROKER = "172.20.10.4" # <--- change to IP of PI
 MQTT_PORT   = 1883
 
 # Driver Information - maps driver type to file and displays name
