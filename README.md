@@ -54,9 +54,10 @@ From there: add drivers, configure parameters, and click **Launch Race** — TOR
 | Driver | Description |
 |---|---|
 | **SimpleAI** | Proportional steering on track position and angle. Multi-tier braking logic. |
-| **PidAI** | Full PID steering controller with integral windup clamp. Early braking tier. |
+| **PidAI** | Full PID steering controller with integral windup clamp. Four-tier braking with early brake zone. |
+| **StanleyAI** | Stanley path-tracking controller. Converts cross-track error to metres and applies the Stanley formula for smooth, speed-aware steering. |
 
-Both drivers support tunable parameters via the UI sliders, saved profiles, and opponent avoidance behaviour.
+All drivers share the same utilities (gearbox, ABS, traction control, launch control, racing line offset) via `driver_utils.py` and support tunable parameters via the UI sliders, saved profiles, and opponent avoidance behaviour.
 
 **External drivers:** participants can bring their own AI by dropping a Python script into `plugins/`. See [docs/external_drivers.md](docs/external_drivers.md) for the interface contract.
 
@@ -67,9 +68,11 @@ Both drivers support tunable parameters via the UI sliders, saved profiles, and 
 ```
 warpcore/
 ├── client.py              # Flask server — race orchestration, telemetry, UI backend
-├── driver.py              # Base Driver class — TORCS UDP protocol, telemetry
+├── driver.py              # Base Driver class — TORCS UDP protocol, sensor parsing, opponent logic
+├── driver_utils.py        # Shared utilities — gearbox, ABS, traction control, launch control, throttle ramping
 ├── simple_ai.py           # SimpleAI driver
 ├── pid_ai.py              # PidAI driver
+├── stanley_ai.py          # StanleyAI driver
 ├── templates/
 │   └── index.html         # Mission Control frontend
 ├── plugins/               # Drop external driver scripts here
