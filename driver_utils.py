@@ -31,13 +31,13 @@ def abs_brake(brake, sensors):
     if not wheel_spin:
         return brake
     expected_spin = (speed / 3.6) / _WHEEL_RADIUS
-    # Watch the SLOWEST wheel - a single locked wheel signals lockup even while the others spin
+    # Monitor slowest wheel
     min_spin = min(wheel_spin)
     if min_spin < 0.3 * expected_spin:
         return brake * 0.5
     return brake
 
-# Cuts throttle when wheel slip exceeds threshold to prevents spinouts under acceleration
+# Prevent spinouts but cutting throttle
 def traction_control(accel, sensors, tc_slip):
     wheel_spin = sensors.get("wheelSpinVel", [])
     speed = sensors.get("speedX", 0)
@@ -51,7 +51,7 @@ def traction_control(accel, sensors, tc_slip):
         return max(0.0, accel - (slip - tc_slip) * 0.4)
     return accel
 
-# Computes the target racing-line offset for the current corner, blending apex aggressiveness with a per-car lane bias
+# Computes the target racing-line offset for the current corner
 def racing_line_offset(sensors, aggressiveness, bias=0.0):
     track = sensors.get("track", [100] * 19)
     left_avg  = sum(track[0:9])  / 9
@@ -63,7 +63,7 @@ def racing_line_offset(sensors, aggressiveness, bias=0.0):
     room = max(0.0, min(1.0, (max(track[8:11]) - 15.0) / 35.0))
     return max(-0.7, min(0.7, line * sharpness * 0.7 + bias * room))
 
-# Locks gear 1 and applies full throttle for the first 2 seconds of each race start
+# Full throttle on race start
 def launch_control(sensors, accel, gear):
     is_race_start = sensors.get("lastLapTime", 0) <= 0 and sensors.get("distRaced", 0) < 100.0
     if is_race_start and sensors.get("curLapTime", 999) < 2.0 and sensors.get("speedX", 0) < 40:
@@ -71,7 +71,7 @@ def launch_control(sensors, accel, gear):
     return accel, gear
 
 
-# Picks a throttle level from the longest beam in a +/-15 degree forward cone, with the clear-distance thresholds scaling with speed
+# Speed around corners
 def corner_throttle(sensors, straight_t, medium_t, tight_t):
     track = sensors.get("track", [100] * 19)
     speed = sensors.get("speedX", 0)
@@ -94,7 +94,7 @@ def gear_accel_limit(gear):
     return 1.0
 
 
-# Smoothly ramps the throttle toward its target, rising gently but allowed to fall quickly to lift off into a corner
+# Smoothly ramps the throttle toward its target
 def ramp_throttle(prev, target, rise=0.08, fall=0.20):
     if target > prev:
         return min(target, prev + rise)

@@ -33,14 +33,14 @@ def parse_sensors(raw):
             try:
                 sensors[key] = float(val)
             except ValueError:
-                pass   # skip a malformed field; callers use sensors.get(key, default)
+                pass   
     for key in multi_keys:
         val = _extract(raw, key)
         if val is not None:
             try:
                 sensors[key] = [float(v) for v in val.split()]
             except ValueError:
-                pass   # skip rather than store [] (which would IndexError downstream)
+                pass   
     return sensors
 
 
@@ -51,7 +51,6 @@ def build_command(accel, brake, steer, gear):
 def opponent_action(sensors, params, state):
     opp = sensors.get("opponents", [200.0] * 36)
 
-    # Sensor windows are mirrored about dead-ahead (index 18) and span the whole flank, so a car gives room to an overtaker beside or behind it, not just one level at the front
     fwd_dist   = min(opp[16:21])   # car directly ahead       
     left_gap   = min(opp[10:18])   # room to the left         
     right_gap  = min(opp[19:27])   # room to the right       
@@ -76,7 +75,7 @@ def opponent_action(sensors, params, state):
         closing = 0.5 * state.get("closing", 0.0)
     state["fwd_prev"], state["closing"] = fwd_dist, closing
 
-    # Longitudinal response to a car directly ahead: hard brake if imminent, ease off and brake progressively while closing, else full throttle
+    # Response to a car directly ahead
     if fwd_dist < brake_dist:
         extra_brake = 0.6
         throttle_scale = 0.0
@@ -88,24 +87,23 @@ def opponent_action(sensors, params, state):
         extra_brake = 0.0
         throttle_scale = 1.0
 
-    # Progressive braking depending on speed and closing to rate to keep safe with car ahead
-    close_speed = params.get("opp_close_speed", 5.0)   # closing m/s above which to start braking
+    # Progressive braking depending on speed 
+    close_speed = params.get("opp_close_speed", 5.0)   # speed above which to start braking
     if closing > close_speed and fwd_dist < slow_dist + closing * 1.5:
         extra_brake = max(extra_brake, min(0.6, (closing - close_speed) / 15.0))
         throttle_scale = min(throttle_scale, 0.6)
 
     snap, desired = False, None
 
-    # Highest priority: a car alongside -> move away now so the two never converge and hit
-    # If boxed in then hold position and ease off
+    # Ensuring cars dont collide
     if left_side < side_dist and right_side < side_dist:
         desired, snap, extra_brake = 0.0, True, max(extra_brake, 0.3)
     elif left_side < side_dist and left_side <= right_side:
-        desired, snap = -overtake_offset, True   # car on the left -> move right
+        desired, snap = -overtake_offset, True   
     elif right_side < side_dist and right_side < left_side:
-        desired, snap = overtake_offset, True    # car on the right -> move left
+        desired, snap = overtake_offset, True    
     else:
-        # Nobody alongside: commit to a side to pass a car ahead, release the commitment when clear.
+        # Overtaking
         side = state.get("side")
         if side is None:
             if fwd_dist < slow_dist:
@@ -128,7 +126,6 @@ def opponent_action(sensors, params, state):
             desired = overtake_offset
         elif side == "right":
             desired = -overtake_offset
-        # else desired stays None -> clear road
 
     # Apply the offset to return driver to driving line
     cur  = state.get("offset", 0.0)
@@ -141,7 +138,7 @@ def opponent_action(sensors, params, state):
         cur = max(goal, cur - offset_inc)
     state["offset"] = cur
 
-    # Once no opponents and back at driving line then return to norrmal driver behaviour.
+    # Return to driving line
     if desired is None and abs(cur) < offset_inc:
         state["offset"] = 0.0
         return None, extra_brake, throttle_scale

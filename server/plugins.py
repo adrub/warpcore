@@ -1,6 +1,4 @@
 # Auto-discovery of external driver plugins dropped into the plugins/ folder.
-# Anyone can submit a self-contained driver file there; it's detected automatically and given a
-# port and colour. Plugins aren't tunable - they just race using the standard car.
 
 import os
 

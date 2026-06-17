@@ -37,9 +37,7 @@ class PidAI(Driver):
 
         # Opponent handling
         target_offset, extra_brake, throttle_scale = opponent_action(sensors, self.params, self._opp_state)
-        # When no opponent is nearby, follow the racing line (inside/outside set by aggressiveness).
-        # Ramp the lane bias in over the first 200m so cars hold their grid line at the start
-        # instead of darting sideways across the track toward their assigned lane.
+        # Follow racing line with no opponents
         apex_aggr = self.params.get("apex_aggressiveness", 0.6)
         lane_bias = self.params.get("lane_bias", 0.0) * min(1.0, sensors.get("distRaced", 0) / 200.0)
         if target_offset is None:
@@ -50,7 +48,7 @@ class PidAI(Driver):
             self.integral = 0.0
             self._prev_opp_side = self._opp_state["side"]
 
-        # Error between desired position (middle of track) and current position + offset
+        # Error between middle of track and current position + offset
         error = track_pos - target_offset
         self.integral += error
 
@@ -59,7 +57,7 @@ class PidAI(Driver):
 
         # Steering calculation
         steer = (steer_kd * angle - steer_kp * error - steer_ki * self.integral) * corner_factor
-        # Dampen steering as speed rises to stop high-speed darting (no effect below ~54 km/h)
+        # Dampen steering as speed rises 
         speed_ms = speed / 3.6
         if speed_ms > 15.0:
             steer /= (1.0 + (speed_ms - 15.0) * 0.02)
@@ -72,21 +70,19 @@ class PidAI(Driver):
         straight_throttle      = self.params.get("straight_throttle", 1.0)
         medium_corner_throttle = self.params.get("medium_corner_throttle", 0.85)
         tight_corner_throttle  = self.params.get("tight_corner_throttle", 0.5)
-
-        # Speed-relative corner detection picks the throttle target; gear limit guards low-gear
-        # wheelspin; ramp smooths the change so throttle eases on rather than snapping.
+        # Corner detection based on current speed and infront space
         target_accel = corner_throttle(sensors, straight_throttle, medium_corner_throttle, tight_corner_throttle)
         target_accel *= gear_accel_limit(gear)
         accel = ramp_throttle(self.prev_accel, target_accel)
         self.prev_accel = accel
 
-        # Launch control - full throttle in gear 1 for first 2 seconds
+        # Launch control 
         accel, gear = launch_control(sensors, accel, gear)
 
-        # Ease off if closing on a car ahead (also moderates the launch so we don't ram the grid)
+        # Ease off if closing on a car ahead 
         accel *= throttle_scale
 
-        # Traction control - cuts throttle when wheels spin faster than ground speed allows
+        # Traction control 
         accel = traction_control(accel, sensors, self.params.get("tc_slip", 1.4))
 
         # Braking params
@@ -103,7 +99,7 @@ class PidAI(Driver):
         brake_soft_range  = self.params.get("brake_soft_range", 35)
         brake_soft_force  = self.params.get("brake_soft_force", 0.3)
 
-        # Braking Logic - brakes for the corner regardless of track position
+        # Braking Logic 
         if speed > brake_emg_speed and forward_range < brake_emg_range:
             brake = brake_emg_force
         elif speed > brake_early_speed and forward_range < brake_early_range:
@@ -117,10 +113,10 @@ class PidAI(Driver):
 
         brake = max(brake, extra_brake)
 
-        # ABS - pulse brake pressure on wheel lockup
+        # ABS 
         brake = abs_brake(brake, sensors)
 
-        # Don't accelerate and brake on the same tick (ignore a negligible brake)
+        # Don't accelerate and brake on the same tick 
         if brake > 0.05:
             accel = 0.0
 

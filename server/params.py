@@ -35,13 +35,13 @@ def expand_simple_params(driver_type, simple):
         "upshift_threshold":       linear_interpolate(0.75, 0.95,  sa),
         "downshift_rpm":           linear_interpolate(7000, 12000, sa),
         "straight_throttle":       linear_interpolate(0.5,  1.0,   ss),
-        "medium_corner_throttle":  linear_interpolate(0.95, 0.5,   cc),  # higher cc = lower throttle in corners
+        "medium_corner_throttle":  linear_interpolate(0.95, 0.5,   cc),  
         "tight_corner_throttle":   linear_interpolate(0.8,  0.2,   cc),
         # Opponent avoidance
         "opp_overtake_offset": linear_interpolate(0.2,  0.7,  oc),   # how far to pull aside to pass
-        "opp_offset_inc":      linear_interpolate(0.02, 0.10, oc),   # how fast to slide aside per tick
-        "opp_brake_dist":      linear_interpolate(15,   4,    oa),   # higher = brake closer (aggressive)
-        "opp_close_speed":     linear_interpolate(3.0,  8.0,  oa),   # higher = only brake on faster closes
+        "opp_offset_inc":      linear_interpolate(0.02, 0.10, oc),   
+        "opp_brake_dist":      linear_interpolate(15,   4,    oa),   
+        "opp_close_speed":     linear_interpolate(3.0,  8.0,  oa),   
         "opp_slow_dist":       linear_interpolate(10,   35,   od),
         "opp_clear_dist":      linear_interpolate(15,   50,   od),
         # Dynamics

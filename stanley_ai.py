@@ -20,8 +20,8 @@ class StanleyAI(Driver):
         track      = sensors.get("track", [100] * 19)
 
         # Stanley params and gear shifting thresholds
-        # stanley_k: cross-track gain (now a physical gain since the error is in metres)
-        # stanley_ks: softening constant in m/s, added to speed to avoid blow-up when slow
+        # stanley_k: cross-track gain 
+        # stanley_ks: softening constant in m/s
         stanley_k         = self.params.get("stanley_k", 1.0)
         stanley_ks        = self.params.get("stanley_ks", 1.0)
         upshift_threshold = self.params.get("upshift_threshold", 0.85)
@@ -29,23 +29,18 @@ class StanleyAI(Driver):
 
         # Opponent handling
         target_offset, extra_brake, throttle_scale = opponent_action(sensors, self.params, self._opp_state)
-        # When no opponent is nearby, follow the racing line (inside/outside set by aggressiveness).
-        # Ramp the lane bias in over the first 200m so cars hold their grid line at the start
-        # instead of darting sideways across the track toward their assigned lane.
+        # Follow racing line with no opponents
         apex_aggr = self.params.get("apex_aggressiveness", 0.6)
         lane_bias = self.params.get("lane_bias", 0.0) * min(1.0, sensors.get("distRaced", 0) / 200.0)
         if target_offset is None:
             target_offset = racing_line_offset(sensors, apex_aggr, lane_bias)
 
-        # Convert the normalised cross-track error to real metres so the Stanley gain is
-        # physically meaningful. Track width is estimated from the perpendicular (-90/+90
-        # degree) sensor beams, clamped to a sane range in case a beam reads out of range.
+        # Convert the normalised cross-track error to metres.
         width = min(25.0, max(5.0, track[0] + track[18]))
         cross_track_error = (track_pos - target_offset) * (width / 2.0)
         speed_ms = speed / 3.6
 
-        # Stanley control law: heading error + speed-scaled cross-track correction.
-        # At speed the cross-track term shrinks so heading dominates; when slow it grows.
+        # Stanley formula
         steer = angle - math.atan(stanley_k * cross_track_error / (stanley_ks + speed_ms))
         steer = max(-1.0, min(1.0, steer))
 
@@ -57,8 +52,7 @@ class StanleyAI(Driver):
         medium_corner_throttle = self.params.get("medium_corner_throttle", 0.85)
         tight_corner_throttle  = self.params.get("tight_corner_throttle", 0.6)
 
-        # Speed-relative corner detection picks the throttle target; gear limit guards low-gear
-        # wheelspin; ramp smooths the change so throttle eases on rather than snapping.
+        # Corner detection based on current speed and infront space
         target_accel = corner_throttle(sensors, straight_throttle, medium_corner_throttle, tight_corner_throttle)
         target_accel *= gear_accel_limit(gear)
         accel = ramp_throttle(self.prev_accel, target_accel)
@@ -84,12 +78,10 @@ class StanleyAI(Driver):
         brake_soft_range = self.params.get("brake_soft_range", 50)
         brake_soft_force = self.params.get("brake_soft_force", 0.2)
 
-        # Use the widest opening in the central sensor cone, not just the dead-ahead beam,
-        # so a road that curves away through a corner isn't mistaken for a wall (which would
-        # otherwise emergency-brake the whole way round and cap corner speed).
+        # Find distance to track edge
         brake_lookahead = max(track[8:11])
 
-        # Braking logic - lift throttle first, only brake if still too fast
+        # Braking logic 
         if speed > brake_emg_speed and brake_lookahead < brake_emg_range:
             accel = 0.0
             brake = brake_emg_force
@@ -97,7 +89,7 @@ class StanleyAI(Driver):
             accel = 0.0
             brake = brake_hard_force
         elif speed > brake_soft_speed and brake_lookahead < brake_soft_range:
-            accel = accel * 0.3   # lift throttle rather than hard brake
+            accel = accel * 0.3   
             brake = brake_soft_force
         else:
             brake = 0

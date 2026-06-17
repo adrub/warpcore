@@ -39,18 +39,16 @@ class SimpleAI(Driver):
         # As car approaches corner increases steering and braking aggressiveness
         corner_factor = 1.0 + max(0, (80 - forward_range) / 80)
 
-        # Avoiding other cars or overtaking requires offset to go around them - handled here
+        # Avoiding other cars or overtaking requires offset to go around them 
         target_offset, extra_brake, throttle_scale = opponent_action(sensors, self.params, self._opp_state)
-        # When no opponent is nearby, follow the racing line (inside/outside set by aggressiveness).
-        # Ramp the lane bias in over the first 200m so cars hold their grid line at the start
-        # instead of darting sideways across the track toward their assigned lane.
+        # Follow racing line with no opponents
         apex_aggr = self.params.get("apex_aggressiveness", 0.6)
         lane_bias = self.params.get("lane_bias", 0.0) * min(1.0, sensors.get("distRaced", 0) / 200.0)
         if target_offset is None:
             target_offset = racing_line_offset(sensors, apex_aggr, lane_bias)
         steer = (angle * angle_gain * corner_factor
                  - (track_pos - target_offset) * position_gain * corner_factor)
-        # Dampen steering as speed rises to stop high-speed darting (no effect below ~54 km/h)
+        # Dampen steering as speed rises to stop high-speed darting 
         speed_ms = speed / 3.6
         if speed_ms > 15.0:
             steer /= (1.0 + (speed_ms - 15.0) * 0.02)
@@ -59,25 +57,24 @@ class SimpleAI(Driver):
         # Gear shifting logic
         gear = gearbox(rpm, gear, upshift_threshold, downshift_rpm)
 
-        # Acceleration depending on space available and corner severity. Scale is 0 - 1.0
+        # Acceleration depending on space available and corner severity.
         straight_throttle      = self.params.get("straight_throttle", 1.0)
         medium_corner_throttle = self.params.get("medium_corner_throttle", 0.85)
         tight_corner_throttle  = self.params.get("tight_corner_throttle", 0.5)
 
-        # Speed-relative corner detection picks the throttle target; gear limit guards low-gear
-        # wheelspin; ramp smooths the change so throttle eases on rather than snapping.
+        # Corner detection based on current speed and infront space
         target_accel = corner_throttle(sensors, straight_throttle, medium_corner_throttle, tight_corner_throttle)
         target_accel *= gear_accel_limit(gear)
         accel = ramp_throttle(self.prev_accel, target_accel)
         self.prev_accel = accel
 
-        # Launch control - full throttle in gear 1 for first 2 seconds
+        # Launch control 
         accel, gear = launch_control(sensors, accel, gear)
 
-        # Ease off if closing on a car ahead (also moderates the launch so we don't ram the grid)
+        # Ease off if closing on a car ahead 
         accel *= throttle_scale
 
-        # Traction control - cuts throttle when wheels spin faster than ground speed allows
+        # Traction control 
         accel = traction_control(accel, sensors, self.params.get("tc_slip", 1.4))
 
         # Braking logic
@@ -96,7 +93,7 @@ class SimpleAI(Driver):
         # ABS - pulse brake pressure on wheel lockup
         brake = abs_brake(brake, sensors)
 
-        # Don't accelerate and brake on the same tick (ignore a negligible brake)
+        # Don't accelerate and brake on the same tick 
         if brake > 0.05:
             accel = 0.0
 
