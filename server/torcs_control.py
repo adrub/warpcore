@@ -143,7 +143,7 @@ def _make_slot_car(slot_idx, hex_color):
 
 
 # Generates per-slot coloured car models and writes a patched scr_server.xml
-def patch_car_colors(race_config):
+def patch_car_colours(race_config):
     try:
         from PIL import Image  # noqa: F401
     except ImportError:
